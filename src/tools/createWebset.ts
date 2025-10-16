@@ -15,14 +15,16 @@ export function registerCreateWebsetTool(server: McpServer, config?: { exaApiKey
       externalId: z.string().optional().describe("Your own identifier for the webset"),
       searchQuery: z.string().optional().describe("Natural language query to populate the webset (e.g., 'AI startups in San Francisco')"),
       searchCount: z.number().optional().describe("Number of items to search for (default: 10)"),
-      searchCriteria: z.array(z.string()).optional().describe("Additional criteria to filter search results"),
+      searchCriteria: z.array(z.object({
+        description: z.string()
+      })).optional().describe("Additional criteria to filter search results. Each criterion is an object with a 'description' field. Example: [{description: 'Founded after 2020'}, {description: 'Has more than 50 employees'}]"),
       enrichments: z.array(z.object({
         description: z.string().describe("What data to extract (e.g., 'Annual revenue in USD', 'Number of full-time employees')"),
         format: z.enum(['text', 'date', 'number', 'options', 'email', 'phone', 'url']).optional().describe("Format of the enrichment response"),
         options: z.array(z.object({
           label: z.string()
-        })).optional().describe("When format is 'options', the different options to choose from")
-      })).optional().describe("Data enrichments to automatically extract for each item")
+        })).optional().describe("When format is 'options', the different options to choose from. Example: [{label: 'B2B'}, {label: 'B2C'}, {label: 'B2B2C'}]")
+      })).optional().describe("Data enrichments to automatically extract for each item. Example: [{description: 'CEO name', format: 'text'}, {description: 'Company type', format: 'options', options: [{label: 'B2B'}, {label: 'B2C'}]}]")
     },
     async ({ name, description, externalId, searchQuery, searchCount, searchCriteria, enrichments }) => {
       const requestId = `create_webset-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;

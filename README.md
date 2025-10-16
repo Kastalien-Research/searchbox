@@ -134,6 +134,17 @@ Use the HTTP-based configuration:
 }
 ```
 
+## Tool Schema Reference
+
+**⚠️ Important for AI Callers:** See [TOOL_SCHEMAS.md](./TOOL_SCHEMAS.md) for exact parameter formats and examples.
+
+**Key Schema Rules:**
+- `criteria` must be an array of objects: `[{description: "..."}]` (NOT an array of strings)
+- `entity` must be an object: `{type: "company"}` (NOT a string)
+- `options` must be an array of objects: `[{label: "..."}]` (NOT an array of strings)
+
+These formats ensure consistency across all tools and match the Websets API specification.
+
 ## Usage Examples
 
 Once configured, you can ask Claude to interact with Websets:
@@ -219,12 +230,28 @@ Creates a new webset collection with optional automatic population and enrichmen
   "name": "Tech Unicorns",
   "searchQuery": "Technology companies valued over $1 billion",
   "searchCount": 50,
+  "searchCriteria": [
+    {"description": "Valued at over $1 billion"},
+    {"description": "Technology sector"}
+  ],
   "enrichments": [
     {
-      "description": "Current company valuation in USD"
+      "description": "Current company valuation in USD",
+      "format": "number"
     },
     {
-      "description": "Names of company founders"
+      "description": "Names of company founders",
+      "format": "text"
+    },
+    {
+      "description": "Company stage",
+      "format": "options",
+      "options": [
+        {"label": "Series A"},
+        {"label": "Series B"},
+        {"label": "Series C+"},
+        {"label": "Public"}
+      ]
     }
   ]
 }

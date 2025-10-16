@@ -15,10 +15,10 @@ export function registerCreateSearchTool(server: McpServer, config?: { exaApiKey
       count: z.number().optional().describe("Number of items to find (default: 10, min: 1)"),
       entity: z.object({
         type: z.enum(['company', 'person', 'article', 'research_paper', 'custom']).describe("Type of entity to search for")
-      }).optional().describe("Entity type to search for"),
+      }).optional().describe("Entity type to search for. Must be an object with a 'type' field. Example: {type: 'company'}"),
       criteria: z.array(z.object({
         description: z.string()
-      })).optional().describe("Additional criteria for evaluating search results"),
+      })).optional().describe("Additional criteria for evaluating search results. Each criterion is an object with a 'description' field. Example: [{description: 'Company is profitable'}, {description: 'Has raised Series A or later'}]"),
       behavior: z.enum(['override', 'append']).optional().describe("'override' replaces existing items, 'append' adds to them (default: override)"),
       recall: z.boolean().optional().describe("Whether to compute recall metrics for the search"),
       metadata: z.record(z.string(), z.string()).optional().describe("Key-value pairs to associate with this search")

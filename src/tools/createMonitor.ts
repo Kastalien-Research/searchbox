@@ -14,9 +14,16 @@ export function registerCreateMonitorTool(server: McpServer, config?: { exaApiKe
       cron: z.string().describe("Cron expression for the schedule (e.g., '0 9 * * 1' for every Monday at 9am). Must be valid Unix cron with 5 fields."),
       timezone: z.string().optional().describe("IANA timezone (e.g., 'America/New_York'). Defaults to 'Etc/UTC'"),
       query: z.string().optional().describe("The search query to use. Defaults to the last search query used."),
-      count: z.number().optional().describe("Maximum number of results to find per run")
+      criteria: z.array(z.object({
+        description: z.string()
+      })).optional().describe("Additional criteria for evaluating search results. Each criterion is an object with a 'description' field. Example: [{description: 'Recently received funding'}, {description: 'Hiring engineers'}]"),
+      entity: z.object({
+        type: z.string()
+      }).optional().describe("Entity type configuration for the search. Must be an object with a 'type' field. Example: {type: 'company'}"),
+      count: z.number().optional().describe("Maximum number of results to find per run"),
+      behavior: z.enum(['append', 'override']).optional().describe("How new items should be added: 'append' adds to existing items, 'override' replaces them (default: append)")
     },
-    async ({ websetId, cron, timezone, query, count }) => {
+    async ({ websetId, cron, timezone, query, criteria, entity, count, behavior }) => {
       const requestId = `create_monitor-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
       const logger = createRequestLogger(requestId, 'create_monitor');
       
@@ -43,7 +50,10 @@ export function registerCreateMonitorTool(server: McpServer, config?: { exaApiKe
             type: 'search',
             config: {
               ...(query && { query }),
-              ...(count && { count })
+              ...(criteria && { criteria }),
+              ...(entity && { entity }),
+              ...(count && { count }),
+              ...(behavior && { behavior })
             }
           }
         };

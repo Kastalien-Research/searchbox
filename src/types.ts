@@ -29,7 +29,7 @@ export interface WebsetSearch {
   websetId: string;
   status: 'running' | 'completed' | 'failed' | 'canceled';
   query?: string;
-  criteria?: string[];
+  criteria?: Array<{ description: string; successRate?: number }>;
   itemsFound: number;
   createdAt: number;
   completedAt?: number;
@@ -77,7 +77,7 @@ export interface CreateWebsetParams {
   search?: {
     query: string;
     count?: number;
-    criteria?: string[];
+    criteria?: Array<{ description: string }>;
   };
   enrichments?: Array<{
     description: string;
@@ -132,7 +132,7 @@ export interface PreviewWebsetResponse {
   entityType?: string;
   search: {
     query: string;
-    criteria?: string[];
+    criteria?: Array<{ description: string }>;
   };
   enrichments: Array<{
     name: string;
