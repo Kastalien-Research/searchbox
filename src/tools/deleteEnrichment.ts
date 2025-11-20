@@ -1,8 +1,8 @@
 import { z } from "zod";
-import axios from "axios";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { API_CONFIG } from "./config.js";
 import { createRequestLogger } from "../utils/logger.js";
+import { ExaApiClient, handleApiError } from "../utils/api.js";
 
 export function registerDeleteEnrichmentTool(server: McpServer, config?: { exaApiKey?: string }): void {
   server.tool(
@@ -19,18 +19,11 @@ export function registerDeleteEnrichmentTool(server: McpServer, config?: { exaAp
       logger.start(`Deleting enrichment ${enrichmentId} from webset: ${websetId}`);
       
       try {
-        const axiosInstance = axios.create({
-          baseURL: API_CONFIG.BASE_URL,
-          headers: {
-            'accept': 'application/json',
-            'x-api-key': config?.exaApiKey || process.env.EXA_API_KEY || ''
-          },
-          timeout: 30000
-        });
+        const client = new ExaApiClient(config?.exaApiKey || process.env.EXA_API_KEY || '');
         
         logger.log("Sending delete enrichment request to API");
         
-        await axiosInstance.delete(
+        await client.delete(
           API_CONFIG.ENDPOINTS.WEBSET_ENRICHMENT_BY_ID(websetId, enrichmentId)
         );
         
@@ -46,31 +39,8 @@ export function registerDeleteEnrichmentTool(server: McpServer, config?: { exaAp
         logger.complete();
         return result;
       } catch (error) {
-        logger.error(error);
-        
-        if (axios.isAxiosError(error)) {
-          const statusCode = error.response?.status || 'unknown';
-          const errorMessage = error.response?.data?.message || error.message;
-          
-          logger.log(`API error (${statusCode}): ${errorMessage}`);
-          return {
-            content: [{
-              type: "text" as const,
-              text: `Error deleting enrichment (${statusCode}): ${errorMessage}`
-            }],
-            isError: true,
-          };
-        }
-        
-        return {
-          content: [{
-            type: "text" as const,
-            text: `Error deleting enrichment: ${error instanceof Error ? error.message : String(error)}`
-          }],
-          isError: true,
-        };
+        return handleApiError(error, logger, 'deleting enrichment');
       }
     }
   );
 }
-

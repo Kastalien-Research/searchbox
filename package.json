@@ -47,7 +47,8 @@
     "@smithery/cli": "^1.4.4",
     "@types/node": "^20.11.24",
     "tsx": "^4.7.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^4.0.10"
   },
   "engines": {
     "node": ">=18.0.0"

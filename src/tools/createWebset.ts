@@ -1,9 +1,9 @@
 import { z } from "zod";
-import axios from "axios";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { API_CONFIG } from "./config.js";
 import { CreateWebsetParams, Webset } from "../types.js";
 import { createRequestLogger } from "../utils/logger.js";
+import { ExaApiClient, handleApiError } from "../utils/api.js";
 
 export function registerCreateWebsetTool(server: McpServer, config?: { exaApiKey?: string }): void {
   server.tool(
@@ -60,15 +60,7 @@ Example call:
           };
         }
 
-        const axiosInstance = axios.create({
-          baseURL: API_CONFIG.BASE_URL,
-          headers: {
-            'accept': 'application/json',
-            'content-type': 'application/json',
-            'x-api-key': config?.exaApiKey || process.env.EXA_API_KEY || ''
-          },
-          timeout: 30000
-        });
+        const client = new ExaApiClient(config?.exaApiKey || process.env.EXA_API_KEY || '');
 
         const params: CreateWebsetParams = {
           name,
@@ -91,36 +83,26 @@ Example call:
         logger.log("Sending create webset request to API");
         logger.log(`Parameters: ${JSON.stringify(params, null, 2)}`);
         
-        const response = await axiosInstance.post<Webset>(
+        const response = await client.post<Webset>(
           API_CONFIG.ENDPOINTS.WEBSETS,
           params
         );
         
-        logger.log(`Created webset: ${response.data.id}`);
+        logger.log(`Created webset: ${response.id}`);
 
         const result = {
           content: [{
             type: "text" as const,
-            text: JSON.stringify(response.data, null, 2)
+            text: JSON.stringify(response, null, 2)
           }]
         };
         
         logger.complete();
         return result;
       } catch (error) {
-        logger.error(error);
-        
-        if (axios.isAxiosError(error)) {
-          const statusCode = error.response?.status || 'unknown';
-          const errorMessage = error.response?.data?.message || error.message;
-          const errorDetails = error.response?.data?.details || '';
-          
-          logger.log(`API error (${statusCode}): ${errorMessage}`);
-          
-          // Provide helpful error message with correct format examples
-          let helpText = '';
+        return handleApiError(error, logger, 'creating webset', (statusCode) => {
           if (statusCode === 400) {
-            helpText = '\n\nCommon issues:\n' +
+            return '\n\nCommon issues:\n' +
               '- searchCriteria must be array of objects: [{description: "criterion"}]\n' +
               '- enrichments must be array of objects with description field\n' +
               '- enrichment options must be array of objects: [{label: "option"}]\n' +
@@ -136,23 +118,8 @@ Example call:
               '  ]\n' +
               '}';
           }
-          
-          return {
-            content: [{
-              type: "text" as const,
-              text: `Error creating webset (${statusCode}): ${errorMessage}${errorDetails ? '\nDetails: ' + errorDetails : ''}${helpText}`
-            }],
-            isError: true,
-          };
-        }
-        
-        return {
-          content: [{
-            type: "text" as const,
-            text: `Error creating webset: ${error instanceof Error ? error.message : String(error)}`
-          }],
-          isError: true,
-        };
+          return '';
+        });
       }
     }
   );

@@ -1,9 +1,9 @@
 import { z } from "zod";
-import axios from "axios";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { API_CONFIG } from "./config.js";
 import { Webset } from "../types.js";
 import { createRequestLogger } from "../utils/logger.js";
+import { ExaApiClient, handleApiError } from "../utils/api.js";
 
 export function registerDeleteWebsetTool(server: McpServer, config?: { exaApiKey?: string }): void {
   server.tool(
@@ -19,19 +19,11 @@ export function registerDeleteWebsetTool(server: McpServer, config?: { exaApiKey
       logger.start(`Deleting webset: ${id}`);
       
       try {
-        const axiosInstance = axios.create({
-          baseURL: API_CONFIG.BASE_URL,
-          headers: {
-            'accept': 'application/json',
-            'content-type': 'application/json',
-            'x-api-key': config?.exaApiKey || process.env.EXA_API_KEY || ''
-          },
-          timeout: 30000
-        });
+        const client = new ExaApiClient(config?.exaApiKey || process.env.EXA_API_KEY || '');
         
         logger.log("Sending delete webset request to API");
         
-        const response = await axiosInstance.delete<Webset>(
+        const response = await client.delete<Webset>(
           API_CONFIG.ENDPOINTS.WEBSET_BY_ID(id)
         );
         
@@ -40,36 +32,14 @@ export function registerDeleteWebsetTool(server: McpServer, config?: { exaApiKey
         const result = {
           content: [{
             type: "text" as const,
-            text: `Successfully deleted webset: ${id}\n\n${JSON.stringify(response.data, null, 2)}`
+            text: `Successfully deleted webset: ${id}\n\n${JSON.stringify(response, null, 2)}`
           }]
         };
         
         logger.complete();
         return result;
       } catch (error) {
-        logger.error(error);
-        
-        if (axios.isAxiosError(error)) {
-          const statusCode = error.response?.status || 'unknown';
-          const errorMessage = error.response?.data?.message || error.message;
-          
-          logger.log(`API error (${statusCode}): ${errorMessage}`);
-          return {
-            content: [{
-              type: "text" as const,
-              text: `Error deleting webset (${statusCode}): ${errorMessage}`
-            }],
-            isError: true,
-          };
-        }
-        
-        return {
-          content: [{
-            type: "text" as const,
-            text: `Error deleting webset: ${error instanceof Error ? error.message : String(error)}`
-          }],
-          isError: true,
-        };
+        return handleApiError(error, logger, 'deleting webset');
       }
     }
   );

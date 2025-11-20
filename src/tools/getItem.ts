@@ -1,9 +1,9 @@
 import { z } from "zod";
-import axios from "axios";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { API_CONFIG } from "./config.js";
 import { WebsetItem } from "../types.js";
 import { createRequestLogger } from "../utils/logger.js";
+import { ExaApiClient, handleApiError } from "../utils/api.js";
 
 export function registerGetItemTool(server: McpServer, config?: { exaApiKey?: string }): void {
   server.tool(
@@ -20,58 +20,28 @@ export function registerGetItemTool(server: McpServer, config?: { exaApiKey?: st
       logger.start(`Getting item ${itemId} from webset: ${websetId}`);
       
       try {
-        const axiosInstance = axios.create({
-          baseURL: API_CONFIG.BASE_URL,
-          headers: {
-            'accept': 'application/json',
-            'x-api-key': config?.exaApiKey || process.env.EXA_API_KEY || ''
-          },
-          timeout: 30000
-        });
+        const client = new ExaApiClient(config?.exaApiKey || process.env.EXA_API_KEY || '');
         
         logger.log("Sending get item request to API");
         
-        const response = await axiosInstance.get<WebsetItem>(
+        const response = await client.get<WebsetItem>(
           API_CONFIG.ENDPOINTS.WEBSET_ITEM_BY_ID(websetId, itemId)
         );
         
-        logger.log(`Retrieved item: ${response.data.id}`);
+        logger.log(`Retrieved item: ${response.id}`);
 
         const result = {
           content: [{
             type: "text" as const,
-            text: JSON.stringify(response.data, null, 2)
+            text: JSON.stringify(response, null, 2)
           }]
         };
         
         logger.complete();
         return result;
       } catch (error) {
-        logger.error(error);
-        
-        if (axios.isAxiosError(error)) {
-          const statusCode = error.response?.status || 'unknown';
-          const errorMessage = error.response?.data?.message || error.message;
-          
-          logger.log(`API error (${statusCode}): ${errorMessage}`);
-          return {
-            content: [{
-              type: "text" as const,
-              text: `Error getting item (${statusCode}): ${errorMessage}`
-            }],
-            isError: true,
-          };
-        }
-        
-        return {
-          content: [{
-            type: "text" as const,
-            text: `Error getting item: ${error instanceof Error ? error.message : String(error)}`
-          }],
-          isError: true,
-        };
+        return handleApiError(error, logger, 'getting item');
       }
     }
   );
 }
-

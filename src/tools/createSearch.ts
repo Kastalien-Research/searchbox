@@ -1,9 +1,9 @@
 import { z } from "zod";
-import axios from "axios";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { API_CONFIG } from "./config.js";
 import { WebsetSearch, CreateSearchParams } from "../types.js";
 import { createRequestLogger } from "../utils/logger.js";
+import { ExaApiClient, handleApiError } from "../utils/api.js";
 
 export function registerCreateSearchTool(server: McpServer, config?: { exaApiKey?: string }): void {
   server.tool(
@@ -54,15 +54,7 @@ Example call:
           };
         }
 
-        const axiosInstance = axios.create({
-          baseURL: API_CONFIG.BASE_URL,
-          headers: {
-            'accept': 'application/json',
-            'content-type': 'application/json',
-            'x-api-key': config?.exaApiKey || process.env.EXA_API_KEY || ''
-          },
-          timeout: 30000
-        });
+        const client = new ExaApiClient(config?.exaApiKey || process.env.EXA_API_KEY || '');
 
         const params: CreateSearchParams = {
           query,
@@ -77,36 +69,26 @@ Example call:
         logger.log("Sending create search request to API");
         logger.log(`Parameters: ${JSON.stringify(params, null, 2)}`);
         
-        const response = await axiosInstance.post<WebsetSearch>(
+        const response = await client.post<WebsetSearch>(
           API_CONFIG.ENDPOINTS.WEBSET_SEARCHES(websetId),
           params
         );
         
-        logger.log(`Created search: ${response.data.id}`);
+        logger.log(`Created search: ${response.id}`);
 
         const result = {
           content: [{
             type: "text" as const,
-            text: JSON.stringify(response.data, null, 2)
+            text: JSON.stringify(response, null, 2)
           }]
         };
         
         logger.complete();
         return result;
       } catch (error) {
-        logger.error(error);
-        
-        if (axios.isAxiosError(error)) {
-          const statusCode = error.response?.status || 'unknown';
-          const errorMessage = error.response?.data?.message || error.message;
-          const errorDetails = error.response?.data?.details || '';
-          
-          logger.log(`API error (${statusCode}): ${errorMessage}`);
-          
-          // Provide helpful error message with correct format examples
-          let helpText = '';
+        return handleApiError(error, logger, 'creating search', (statusCode) => {
           if (statusCode === 400) {
-            helpText = '\n\nCommon issues:\n' +
+            return '\n\nCommon issues:\n' +
               '- criteria must be array of objects: [{description: "criterion"}]\n' +
               '- entity must be object: {type: "company"}\n' +
               '- count must be a positive number\n' +
@@ -120,25 +102,9 @@ Example call:
               '  "count": 10\n' +
               '}';
           }
-          
-          return {
-            content: [{
-              type: "text" as const,
-              text: `Error creating search (${statusCode}): ${errorMessage}${errorDetails ? '\nDetails: ' + errorDetails : ''}${helpText}`
-            }],
-            isError: true,
-          };
-        }
-        
-        return {
-          content: [{
-            type: "text" as const,
-            text: `Error creating search: ${error instanceof Error ? error.message : String(error)}`
-          }],
-          isError: true,
-        };
+          return '';
+        });
       }
     }
   );
 }
-

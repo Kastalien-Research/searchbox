@@ -1,9 +1,9 @@
 import { z } from "zod";
-import axios from "axios";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { API_CONFIG } from "./config.js";
 import { ListItemsResponse } from "../types.js";
 import { createRequestLogger } from "../utils/logger.js";
+import { ExaApiClient, handleApiError } from "../utils/api.js";
 
 export function registerListItemsTool(server: McpServer, config?: { exaApiKey?: string }): void {
   server.tool(
@@ -21,15 +21,7 @@ export function registerListItemsTool(server: McpServer, config?: { exaApiKey?: 
       logger.start(`Listing items for webset: ${websetId}`);
       
       try {
-        const axiosInstance = axios.create({
-          baseURL: API_CONFIG.BASE_URL,
-          headers: {
-            'accept': 'application/json',
-            'content-type': 'application/json',
-            'x-api-key': config?.exaApiKey || process.env.EXA_API_KEY || ''
-          },
-          timeout: 30000
-        });
+        const client = new ExaApiClient(config?.exaApiKey || process.env.EXA_API_KEY || '');
 
         const params: Record<string, any> = {};
         if (limit) params.limit = Math.min(limit, API_CONFIG.MAX_LIMIT);
@@ -37,12 +29,12 @@ export function registerListItemsTool(server: McpServer, config?: { exaApiKey?: 
         
         logger.log("Sending list items request to API");
         
-        const response = await axiosInstance.get<ListItemsResponse>(
+        const response = await client.get<ListItemsResponse>(
           API_CONFIG.ENDPOINTS.WEBSET_ITEMS(websetId),
-          { params }
+          params
         );
         
-        logger.log(`Retrieved ${response.data.data.length} items`);
+        logger.log(`Retrieved ${response.data.length} items`);
 
         const result = {
           content: [{
@@ -54,29 +46,7 @@ export function registerListItemsTool(server: McpServer, config?: { exaApiKey?: 
         logger.complete();
         return result;
       } catch (error) {
-        logger.error(error);
-        
-        if (axios.isAxiosError(error)) {
-          const statusCode = error.response?.status || 'unknown';
-          const errorMessage = error.response?.data?.message || error.message;
-          
-          logger.log(`API error (${statusCode}): ${errorMessage}`);
-          return {
-            content: [{
-              type: "text" as const,
-              text: `Error listing items (${statusCode}): ${errorMessage}`
-            }],
-            isError: true,
-          };
-        }
-        
-        return {
-          content: [{
-            type: "text" as const,
-            text: `Error listing items: ${error instanceof Error ? error.message : String(error)}`
-          }],
-          isError: true,
-        };
+        return handleApiError(error, logger, 'listing items');
       }
     }
   );

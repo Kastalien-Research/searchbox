@@ -170,7 +170,9 @@ export interface CreateMonitorParams {
     config?: {
       query?: string;
       criteria?: Array<{ description: string }>;
-      entity?: string;
+      entity?: {
+        type: string;
+      };
       count?: number;
       behavior?: 'append' | 'override';
     };

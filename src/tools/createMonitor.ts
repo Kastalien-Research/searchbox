@@ -1,9 +1,9 @@
 import { z } from "zod";
-import axios from "axios";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { API_CONFIG } from "./config.js";
 import { WebsetMonitor, CreateMonitorParams } from "../types.js";
 import { createRequestLogger } from "../utils/logger.js";
+import { ExaApiClient, handleApiError } from "../utils/api.js";
 
 export function registerCreateMonitorTool(server: McpServer, config?: { exaApiKey?: string }): void {
   server.tool(
@@ -68,15 +68,7 @@ Example call:
           };
         }
 
-        const axiosInstance = axios.create({
-          baseURL: API_CONFIG.BASE_URL,
-          headers: {
-            'accept': 'application/json',
-            'content-type': 'application/json',
-            'x-api-key': config?.exaApiKey || process.env.EXA_API_KEY || ''
-          },
-          timeout: 30000
-        });
+        const client = new ExaApiClient(config?.exaApiKey || process.env.EXA_API_KEY || '');
 
         const params: CreateMonitorParams = {
           websetId,
@@ -99,36 +91,26 @@ Example call:
         logger.log("Sending create monitor request to API");
         logger.log(`Parameters: ${JSON.stringify(params, null, 2)}`);
         
-        const response = await axiosInstance.post<WebsetMonitor>(
+        const response = await client.post<WebsetMonitor>(
           API_CONFIG.ENDPOINTS.MONITORS,
           params
         );
         
-        logger.log(`Created monitor: ${response.data.id}`);
+        logger.log(`Created monitor: ${response.id}`);
 
         const result = {
           content: [{
             type: "text" as const,
-            text: JSON.stringify(response.data, null, 2)
+            text: JSON.stringify(response, null, 2)
           }]
         };
         
         logger.complete();
         return result;
       } catch (error) {
-        logger.error(error);
-        
-        if (axios.isAxiosError(error)) {
-          const statusCode = error.response?.status || 'unknown';
-          const errorMessage = error.response?.data?.message || error.message;
-          const errorDetails = error.response?.data?.details || '';
-          
-          logger.log(`API error (${statusCode}): ${errorMessage}`);
-          
-          // Provide helpful error message with correct format examples
-          let helpText = '';
+        return handleApiError(error, logger, 'creating monitor', (statusCode) => {
           if (statusCode === 400) {
-            helpText = '\n\nCommon issues:\n' +
+            return '\n\nCommon issues:\n' +
               '- cron must have exactly 5 fields: "minute hour day month weekday"\n' +
               '- criteria must be array of objects: [{description: "criterion"}]\n' +
               '- entity must be object: {type: "company"}\n' +
@@ -150,23 +132,8 @@ Example call:
               '- "0 0 * * *" = Daily at midnight\n' +
               '- "0 */6 * * *" = Every 6 hours';
           }
-          
-          return {
-            content: [{
-              type: "text" as const,
-              text: `Error creating monitor (${statusCode}): ${errorMessage}${errorDetails ? '\nDetails: ' + errorDetails : ''}${helpText}`
-            }],
-            isError: true,
-          };
-        }
-        
-        return {
-          content: [{
-            type: "text" as const,
-            text: `Error creating monitor: ${error instanceof Error ? error.message : String(error)}`
-          }],
-          isError: true,
-        };
+          return '';
+        });
       }
     }
   );
