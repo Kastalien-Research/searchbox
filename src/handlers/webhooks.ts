@@ -1,7 +1,9 @@
 import type { Exa } from 'exa-js';
-import { OperationHandler, successResult, errorResult } from './types.js';
+import { OperationHandler, successResult, errorResult, requireParams } from './types.js';
 
 export const create: OperationHandler = async (args, exa) => {
+  const guard = requireParams('webhooks.create', args, 'url', 'events');
+  if (guard) return guard;
   try {
     const params: Record<string, unknown> = {
       url: args.url,
@@ -17,6 +19,8 @@ export const create: OperationHandler = async (args, exa) => {
 };
 
 export const get: OperationHandler = async (args, exa) => {
+  const guard = requireParams('webhooks.get', args, 'id');
+  if (guard) return guard;
   try {
     const response = await exa.websets.webhooks.get(args.id as string);
     return successResult(response);
@@ -39,6 +43,8 @@ export const list: OperationHandler = async (args, exa) => {
 };
 
 export const update: OperationHandler = async (args, exa) => {
+  const guard = requireParams('webhooks.update', args, 'id');
+  if (guard) return guard;
   try {
     const id = args.id as string;
     const params: Record<string, unknown> = {};
@@ -54,6 +60,8 @@ export const update: OperationHandler = async (args, exa) => {
 };
 
 export const del: OperationHandler = async (args, exa) => {
+  const guard = requireParams('webhooks.delete', args, 'id');
+  if (guard) return guard;
   try {
     const response = await exa.websets.webhooks.delete(args.id as string);
     return successResult(response);
@@ -77,6 +85,8 @@ export const getAll: OperationHandler = async (args, exa) => {
 };
 
 export const getAllAttempts: OperationHandler = async (args, exa) => {
+  const guard = requireParams('webhooks.getAllAttempts', args, 'id');
+  if (guard) return guard;
   try {
     const id = args.id as string;
     const maxItems = (args.maxItems as number | undefined) ?? 500;
@@ -95,6 +105,8 @@ export const getAllAttempts: OperationHandler = async (args, exa) => {
 };
 
 export const listAttempts: OperationHandler = async (args, exa) => {
+  const guard = requireParams('webhooks.list_attempts', args, 'id');
+  if (guard) return guard;
   try {
     const opts: Record<string, unknown> = {};
     if (args.limit) opts.limit = args.limit;

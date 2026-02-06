@@ -1,5 +1,5 @@
 import type { Exa } from 'exa-js';
-import { OperationHandler, successResult, errorResult } from './types.js';
+import { OperationHandler, successResult, errorResult, requireParams } from './types.js';
 
 export const list: OperationHandler = async (args, exa) => {
   try {
@@ -32,6 +32,8 @@ export const getAll: OperationHandler = async (args, exa) => {
 };
 
 export const get: OperationHandler = async (args, exa) => {
+  const guard = requireParams('events.get', args, 'id');
+  if (guard) return guard;
   try {
     const response = await exa.websets.events.get(args.id as string);
     return successResult(response);

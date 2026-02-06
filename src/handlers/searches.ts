@@ -1,7 +1,15 @@
 import type { Exa } from 'exa-js';
-import { OperationHandler, successResult, errorResult } from './types.js';
+import { OperationHandler, successResult, errorResult, requireParams } from './types.js';
+
+const SEARCH_HINTS = `Common issues:
+- criteria must be array of objects: [{description: "criterion"}]
+- entity must be object: {type: "company"}
+- count must be a positive number
+- behavior must be "override" or "append"`;
 
 export const create: OperationHandler = async (args, exa) => {
+  const guard = requireParams('searches.create', args, 'websetId', 'query');
+  if (guard) return guard;
   try {
     const websetId = args.websetId as string;
     const params: Record<string, unknown> = { query: args.query };
@@ -16,18 +24,13 @@ export const create: OperationHandler = async (args, exa) => {
     const response = await exa.websets.searches.create(websetId, params as any);
     return successResult(response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return {
-      content: [{
-        type: 'text' as const,
-        text: `Error in searches.create: ${message}\n\nCommon issues:\n- criteria must be array of objects: [{description: "criterion"}]\n- entity must be object: {type: "company"}\n- count must be a positive number\n- behavior must be "override" or "append"`,
-      }],
-      isError: true,
-    };
+    return errorResult('searches.create', error, SEARCH_HINTS);
   }
 };
 
 export const get: OperationHandler = async (args, exa) => {
+  const guard = requireParams('searches.get', args, 'websetId', 'searchId');
+  if (guard) return guard;
   try {
     const response = await exa.websets.searches.get(
       args.websetId as string,
@@ -40,6 +43,8 @@ export const get: OperationHandler = async (args, exa) => {
 };
 
 export const cancel: OperationHandler = async (args, exa) => {
+  const guard = requireParams('searches.cancel', args, 'websetId', 'searchId');
+  if (guard) return guard;
   try {
     const response = await exa.websets.searches.cancel(
       args.websetId as string,

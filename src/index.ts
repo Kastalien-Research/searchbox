@@ -7,5 +7,5 @@ const PORT = process.env.PORT || 7860;
 
 app.listen(PORT, () => {
   console.log(`Websets MCP Server running on port ${PORT}`);
-  console.log(`Endpoint: http://localhost:${PORT}/message`);
+  console.log(`Endpoint: http://localhost:${PORT}/mcp`);
 });

@@ -1,7 +1,14 @@
 import type { Exa } from 'exa-js';
-import { OperationHandler, successResult, errorResult } from './types.js';
+import { OperationHandler, successResult, errorResult, requireParams, validationError } from './types.js';
+
+const ENRICHMENT_HINTS = `Common issues:
+- options must be array of objects: [{label: "option"}]
+- format must be one of: text, date, number, options, email, phone, url
+- When format is "options", you must provide the options parameter`;
 
 export const create: OperationHandler = async (args, exa) => {
+  const guard = requireParams('enrichments.create', args, 'websetId', 'description');
+  if (guard) return guard;
   try {
     const websetId = args.websetId as string;
     const format = args.format as string | undefined;
@@ -9,24 +16,12 @@ export const create: OperationHandler = async (args, exa) => {
 
     // Application-level validation: options required when format='options'
     if (format === 'options' && (!options || options.length === 0)) {
-      return {
-        content: [{
-          type: 'text' as const,
-          text: `When format is "options", you must provide the options parameter with at least one option.`,
-        }],
-        isError: true,
-      };
+      return validationError('When format is "options", you must provide the options parameter with at least one option.');
     }
 
     // Application-level validation: max 150 options
     if (options && options.length > 150) {
-      return {
-        content: [{
-          type: 'text' as const,
-          text: `Too many options: ${options.length}. Maximum is 150 options.`,
-        }],
-        isError: true,
-      };
+      return validationError(`Too many options: ${options.length}. Maximum is 150 options.`);
     }
 
     const params: Record<string, unknown> = { description: args.description };
@@ -37,18 +32,13 @@ export const create: OperationHandler = async (args, exa) => {
     const response = await exa.websets.enrichments.create(websetId, params as any);
     return successResult(response);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return {
-      content: [{
-        type: 'text' as const,
-        text: `Error in enrichments.create: ${message}\n\nCommon issues:\n- options must be array of objects: [{label: "option"}]\n- format must be one of: text, date, number, options, email, phone, url\n- When format is "options", you must provide the options parameter`,
-      }],
-      isError: true,
-    };
+    return errorResult('enrichments.create', error, ENRICHMENT_HINTS);
   }
 };
 
 export const get: OperationHandler = async (args, exa) => {
+  const guard = requireParams('enrichments.get', args, 'websetId', 'enrichmentId');
+  if (guard) return guard;
   try {
     const response = await exa.websets.enrichments.get(
       args.websetId as string,
@@ -61,6 +51,8 @@ export const get: OperationHandler = async (args, exa) => {
 };
 
 export const cancel: OperationHandler = async (args, exa) => {
+  const guard = requireParams('enrichments.cancel', args, 'websetId', 'enrichmentId');
+  if (guard) return guard;
   try {
     const response = await exa.websets.enrichments.cancel(
       args.websetId as string,
@@ -73,6 +65,8 @@ export const cancel: OperationHandler = async (args, exa) => {
 };
 
 export const update: OperationHandler = async (args, exa) => {
+  const guard = requireParams('enrichments.update', args, 'websetId', 'enrichmentId');
+  if (guard) return guard;
   try {
     const websetId = args.websetId as string;
     const enrichmentId = args.enrichmentId as string;
@@ -92,6 +86,8 @@ export const update: OperationHandler = async (args, exa) => {
 };
 
 export const del: OperationHandler = async (args, exa) => {
+  const guard = requireParams('enrichments.delete', args, 'websetId', 'enrichmentId');
+  if (guard) return guard;
   try {
     const response = await exa.websets.enrichments.delete(
       args.websetId as string,

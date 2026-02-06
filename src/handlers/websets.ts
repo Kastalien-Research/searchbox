@@ -1,5 +1,5 @@
 import type { Exa } from 'exa-js';
-import { OperationHandler, successResult, errorResult } from './types.js';
+import { OperationHandler, successResult, errorResult, requireParams } from './types.js';
 
 export const create: OperationHandler = async (args, exa) => {
   try {
@@ -32,6 +32,8 @@ export const create: OperationHandler = async (args, exa) => {
 };
 
 export const get: OperationHandler = async (args, exa) => {
+  const guard = requireParams('websets.get', args, 'id');
+  if (guard) return guard;
   try {
     const id = args.id as string;
     const expand = args.expand as string[] | undefined;
@@ -56,6 +58,8 @@ export const list: OperationHandler = async (args, exa) => {
 };
 
 export const update: OperationHandler = async (args, exa) => {
+  const guard = requireParams('websets.update', args, 'id');
+  if (guard) return guard;
   try {
     const id = args.id as string;
     const response = await exa.websets.update(id, {
@@ -68,6 +72,8 @@ export const update: OperationHandler = async (args, exa) => {
 };
 
 export const del: OperationHandler = async (args, exa) => {
+  const guard = requireParams('websets.delete', args, 'id');
+  if (guard) return guard;
   try {
     const id = args.id as string;
     const response = await exa.websets.delete(id);
@@ -78,6 +84,8 @@ export const del: OperationHandler = async (args, exa) => {
 };
 
 export const cancel: OperationHandler = async (args, exa) => {
+  const guard = requireParams('websets.cancel', args, 'id');
+  if (guard) return guard;
   try {
     const id = args.id as string;
     const response = await exa.websets.cancel(id);
@@ -88,6 +96,8 @@ export const cancel: OperationHandler = async (args, exa) => {
 };
 
 export const waitUntilIdle: OperationHandler = async (args, exa) => {
+  const guard = requireParams('websets.waitUntilIdle', args, 'id');
+  if (guard) return guard;
   try {
     const id = args.id as string;
     const timeout = (args.timeout as number | undefined) ?? 300_000;
@@ -114,6 +124,8 @@ export const getAll: OperationHandler = async (args, exa) => {
 };
 
 export const preview: OperationHandler = async (args, exa) => {
+  const guard = requireParams('websets.preview', args, 'query');
+  if (guard) return guard;
   try {
     const search: Record<string, unknown> = {
       query: args.query,
