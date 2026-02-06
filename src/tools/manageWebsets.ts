@@ -1,0 +1,142 @@
+import { z } from 'zod';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { Exa } from 'exa-js';
+import type { OperationHandler, ToolResult } from '../handlers/types.js';
+import { createRequestLogger } from '../utils/logger.js';
+
+import * as websets from '../handlers/websets.js';
+import * as searches from '../handlers/searches.js';
+import * as items from '../handlers/items.js';
+import * as enrichments from '../handlers/enrichments.js';
+import * as monitors from '../handlers/monitors.js';
+import * as webhooks from '../handlers/webhooks.js';
+import * as imports from '../handlers/imports.js';
+import * as events from '../handlers/events.js';
+
+// Operation metadata: name, handler, summary for description
+interface OperationMeta {
+  handler: OperationHandler;
+  summary: string;
+}
+
+const OPERATIONS: Record<string, OperationMeta> = {
+  // Websets domain
+  'websets.create': { handler: websets.create, summary: 'Create a new webset (args: searchQuery, searchCount, searchCriteria, enrichments, name, description, externalId, metadata, entity)' },
+  'websets.get': { handler: websets.get, summary: 'Get a webset by ID (args: id, expand?)' },
+  'websets.list': { handler: websets.list, summary: 'List all websets (args: limit?, cursor?)' },
+  'websets.update': { handler: websets.update, summary: 'Update webset metadata (args: id, metadata)' },
+  'websets.delete': { handler: websets.del, summary: 'Delete a webset (args: id)' },
+  'websets.cancel': { handler: websets.cancel, summary: 'Cancel a webset (args: id)' },
+  'websets.preview': { handler: websets.preview, summary: 'Preview a webset query (args: query, count?, entity?, search?)' },
+
+  // Searches domain
+  'searches.create': { handler: searches.create, summary: 'Create a search on a webset (args: websetId, query, count?, entity?, criteria?, behavior?, recall?, metadata?)' },
+  'searches.get': { handler: searches.get, summary: 'Get search status (args: websetId, searchId)' },
+  'searches.cancel': { handler: searches.cancel, summary: 'Cancel a search (args: websetId, searchId)' },
+
+  // Items domain
+  'items.list': { handler: items.list, summary: 'List items in a webset (args: websetId, limit?, cursor?)' },
+  'items.get': { handler: items.get, summary: 'Get a specific item (args: websetId, itemId)' },
+  'items.delete': { handler: items.del, summary: 'Delete an item (args: websetId, itemId)' },
+
+  // Enrichments domain
+  'enrichments.create': { handler: enrichments.create, summary: 'Create an enrichment (args: websetId, description, format?, options?, metadata?)' },
+  'enrichments.get': { handler: enrichments.get, summary: 'Get enrichment status (args: websetId, enrichmentId)' },
+  'enrichments.cancel': { handler: enrichments.cancel, summary: 'Cancel an enrichment (args: websetId, enrichmentId)' },
+  'enrichments.update': { handler: enrichments.update, summary: 'Update an enrichment (args: websetId, enrichmentId, description?, format?, options?, metadata?)' },
+  'enrichments.delete': { handler: enrichments.del, summary: 'Delete an enrichment (args: websetId, enrichmentId)' },
+
+  // Monitors domain
+  'monitors.create': { handler: monitors.create, summary: 'Create a monitor (args: websetId, cron, timezone?, query?, criteria?, entity?, count?, behavior?, metadata?)' },
+  'monitors.get': { handler: monitors.get, summary: 'Get a monitor (args: id)' },
+  'monitors.list': { handler: monitors.list, summary: 'List monitors (args: limit?, cursor?, websetId?)' },
+  'monitors.update': { handler: monitors.update, summary: 'Update a monitor (args: id, cadence?, behavior?, metadata?, status?)' },
+  'monitors.delete': { handler: monitors.del, summary: 'Delete a monitor (args: id)' },
+  'monitors.runs.list': { handler: monitors.runsList, summary: 'List monitor runs (args: monitorId, limit?, cursor?)' },
+  'monitors.runs.get': { handler: monitors.runsGet, summary: 'Get a monitor run (args: monitorId, runId)' },
+
+  // Webhooks domain
+  'webhooks.create': { handler: webhooks.create, summary: 'Create a webhook (args: url, events, metadata?)' },
+  'webhooks.get': { handler: webhooks.get, summary: 'Get a webhook (args: id)' },
+  'webhooks.list': { handler: webhooks.list, summary: 'List webhooks (args: limit?, cursor?)' },
+  'webhooks.update': { handler: webhooks.update, summary: 'Update a webhook (args: id, url?, events?, metadata?)' },
+  'webhooks.delete': { handler: webhooks.del, summary: 'Delete a webhook (args: id)' },
+  'webhooks.list_attempts': { handler: webhooks.listAttempts, summary: 'List webhook delivery attempts (args: id, limit?, cursor?, eventType?, successful?)' },
+
+  // Imports domain
+  'imports.create': { handler: imports.create, summary: 'Create an import (args: format, entity, count, size, title?, csv?, metadata?)' },
+  'imports.get': { handler: imports.get, summary: 'Get an import (args: id)' },
+  'imports.list': { handler: imports.list, summary: 'List imports (args: limit?, cursor?)' },
+  'imports.update': { handler: imports.update, summary: 'Update an import (args: id, metadata?, title?)' },
+  'imports.delete': { handler: imports.del, summary: 'Delete an import (args: id)' },
+
+  // Events domain
+  'events.list': { handler: events.list, summary: 'List events (args: limit?, cursor?, types?)' },
+  'events.get': { handler: events.get, summary: 'Get an event (args: id)' },
+};
+
+const OPERATION_NAMES = Object.keys(OPERATIONS) as [string, ...string[]];
+
+function buildToolDescription(): string {
+  const groups: Record<string, string[]> = {};
+  for (const [name, meta] of Object.entries(OPERATIONS)) {
+    const domain = name.split('.')[0];
+    if (!groups[domain]) groups[domain] = [];
+    groups[domain].push(`  ${name} — ${meta.summary}`);
+  }
+
+  const sections = Object.entries(groups)
+    .map(([domain, ops]) => `${domain.toUpperCase()}:\n${ops.join('\n')}`)
+    .join('\n\n');
+
+  return `Manage Exa Websets — unified tool for all websets operations.
+
+Choose an operation and pass its arguments in the args object.
+
+PARAMETER FORMAT RULES:
+- criteria: MUST be [{description: "..."}] (array of objects, NOT strings)
+- entity: MUST be {type: "company"} (object, NOT string)
+- options: MUST be [{label: "..."}] (array of objects, NOT strings)
+- cron: MUST be 5-field format "minute hour day month weekday"
+
+OPERATIONS:
+
+${sections}`;
+}
+
+export function registerManageWebsetsTool(server: McpServer, exa: Exa): void {
+  server.registerTool(
+    'manage_websets',
+    {
+      description: buildToolDescription(),
+      inputSchema: {
+        operation: z.enum(OPERATION_NAMES).describe('The operation to perform'),
+        args: z.record(z.string(), z.unknown()).optional().describe('Operation-specific arguments'),
+      },
+    },
+    async ({ operation, args }) => {
+      const requestId = `manage_websets-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const logger = createRequestLogger(requestId, operation);
+
+      logger.start(operation);
+
+      const meta = OPERATIONS[operation];
+      if (!meta) {
+        return {
+          content: [{ type: 'text' as const, text: `Unknown operation: ${operation}` }],
+          isError: true,
+        };
+      }
+
+      const result = await meta.handler(args || {}, exa);
+
+      if (result.isError) {
+        logger.error(result.content[0]?.text || 'Unknown error');
+      } else {
+        logger.complete();
+      }
+
+      return result;
+    },
+  );
+}
