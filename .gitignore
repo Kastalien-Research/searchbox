@@ -6,3 +6,4 @@ dist/
 .DS_Store
 .mcp.json
 run-websets-mcp.sh
+research-workflows/workflows.db
