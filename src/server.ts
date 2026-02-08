@@ -71,7 +71,7 @@ export function createServer(config: ServerConfig): ServerInstance {
     }
   };
 
-  app.all("/message", async (req: Request, res: Response) => {
+  app.all("/mcp", async (req: Request, res: Response) => {
     const sessionId = req.headers["mcp-session-id"] as string | undefined;
 
     try {

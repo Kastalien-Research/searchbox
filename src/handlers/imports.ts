@@ -1,7 +1,9 @@
 import type { Exa } from 'exa-js';
-import { OperationHandler, successResult, errorResult } from './types.js';
+import { OperationHandler, successResult, errorResult, requireParams } from './types.js';
 
 export const create: OperationHandler = async (args, exa) => {
+  const guard = requireParams('imports.create', args, 'format', 'entity', 'count', 'size');
+  if (guard) return guard;
   try {
     const params: Record<string, unknown> = {
       format: args.format,
@@ -21,6 +23,8 @@ export const create: OperationHandler = async (args, exa) => {
 };
 
 export const get: OperationHandler = async (args, exa) => {
+  const guard = requireParams('imports.get', args, 'id');
+  if (guard) return guard;
   try {
     const response = await exa.websets.imports.get(args.id as string);
     return successResult(response);
@@ -43,6 +47,8 @@ export const list: OperationHandler = async (args, exa) => {
 };
 
 export const update: OperationHandler = async (args, exa) => {
+  const guard = requireParams('imports.update', args, 'id');
+  if (guard) return guard;
   try {
     const id = args.id as string;
     const params: Record<string, unknown> = {};
@@ -56,7 +62,37 @@ export const update: OperationHandler = async (args, exa) => {
   }
 };
 
+export const waitUntilCompleted: OperationHandler = async (args, exa) => {
+  const guard = requireParams('imports.waitUntilCompleted', args, 'id');
+  if (guard) return guard;
+  try {
+    const id = args.id as string;
+    const timeout = (args.timeout as number | undefined) ?? 300_000;
+    const pollInterval = (args.pollInterval as number | undefined) ?? 2_000;
+    const response = await exa.websets.imports.waitUntilCompleted(id, { timeout, pollInterval });
+    return successResult(response);
+  } catch (error) {
+    return errorResult('imports.waitUntilCompleted', error);
+  }
+};
+
+export const getAll: OperationHandler = async (args, exa) => {
+  try {
+    const maxItems = (args.maxItems as number | undefined) ?? 100;
+    const results: unknown[] = [];
+    for await (const item of exa.websets.imports.listAll()) {
+      results.push(item);
+      if (results.length >= maxItems) break;
+    }
+    return successResult({ data: results, count: results.length, truncated: results.length >= maxItems });
+  } catch (error) {
+    return errorResult('imports.getAll', error);
+  }
+};
+
 export const del: OperationHandler = async (args, exa) => {
+  const guard = requireParams('imports.delete', args, 'id');
+  if (guard) return guard;
   try {
     const response = await exa.websets.imports.delete(args.id as string);
     return successResult(response);

@@ -30,7 +30,7 @@ export async function startE2EServer(opts?: { apiKey?: string }): Promise<E2ECon
 
   const client = new Client({ name: 'e2e-test', version: '1.0.0' });
   const clientTransport = new StreamableHTTPClientTransport(
-    new URL(`${baseUrl}/message`)
+    new URL(`${baseUrl}/mcp`)
   );
   await client.connect(clientTransport);
 

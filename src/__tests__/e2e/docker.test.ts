@@ -57,7 +57,7 @@ describe.skipIf(!HAS_DOCKER || SKIP_DOCKER || !HAS_API_KEY)('Docker E2E', () => 
   it('MCP client can connect and list tools', async () => {
     const client = new Client({ name: 'docker-e2e', version: '1.0.0' });
     const transport = new StreamableHTTPClientTransport(
-      new URL(`${BASE_URL}/message`)
+      new URL(`${BASE_URL}/mcp`)
     );
     try {
       await client.connect(transport);

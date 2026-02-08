@@ -1,32 +1,22 @@
 import type { Exa } from 'exa-js';
-import { OperationHandler, successResult, errorResult } from './types.js';
+import { OperationHandler, successResult, errorResult, requireParams, validationError } from './types.js';
 
 export const create: OperationHandler = async (args, exa) => {
+  const guard = requireParams('monitors.create', args, 'websetId', 'cron');
+  if (guard) return guard;
   try {
     const cron = args.cron as string;
     const count = args.count as number | undefined;
 
     // Application-level validation: count must be >= 1
     if (count !== undefined && count < 1) {
-      return {
-        content: [{
-          type: 'text' as const,
-          text: `Invalid count: ${count}. Must be at least 1.`,
-        }],
-        isError: true,
-      };
+      return validationError(`Invalid count: ${count}. Must be at least 1.`);
     }
 
     // Application-level validation: cron must have exactly 5 fields
     const cronFields = cron.trim().split(/\s+/);
     if (cronFields.length !== 5) {
-      return {
-        content: [{
-          type: 'text' as const,
-          text: `Invalid cron expression: "${cron}". Must have exactly 5 fields (minute hour day month weekday). Examples: "0 9 * * 1" (every Monday at 9am), "0 0 * * *" (daily at midnight)`,
-        }],
-        isError: true,
-      };
+      return validationError(`Invalid cron expression: "${cron}". Must have exactly 5 fields (minute hour day month weekday). Examples: "0 9 * * 1" (every Monday at 9am), "0 0 * * *" (daily at midnight)`);
     }
 
     const cadence: Record<string, unknown> = { cron };
@@ -54,6 +44,8 @@ export const create: OperationHandler = async (args, exa) => {
 };
 
 export const get: OperationHandler = async (args, exa) => {
+  const guard = requireParams('monitors.get', args, 'id');
+  if (guard) return guard;
   try {
     const response = await exa.websets.monitors.get(args.id as string);
     return successResult(response);
@@ -77,6 +69,8 @@ export const list: OperationHandler = async (args, exa) => {
 };
 
 export const update: OperationHandler = async (args, exa) => {
+  const guard = requireParams('monitors.update', args, 'id');
+  if (guard) return guard;
   try {
     const id = args.id as string;
     const params: Record<string, unknown> = {};
@@ -93,6 +87,8 @@ export const update: OperationHandler = async (args, exa) => {
 };
 
 export const del: OperationHandler = async (args, exa) => {
+  const guard = requireParams('monitors.delete', args, 'id');
+  if (guard) return guard;
   try {
     const response = await exa.websets.monitors.delete(args.id as string);
     return successResult(response);
@@ -101,7 +97,25 @@ export const del: OperationHandler = async (args, exa) => {
   }
 };
 
+export const getAll: OperationHandler = async (args, exa) => {
+  try {
+    const maxItems = (args.maxItems as number | undefined) ?? 100;
+    const opts: Record<string, unknown> = {};
+    if (args.websetId) opts.websetId = args.websetId;
+    const results: unknown[] = [];
+    for await (const item of exa.websets.monitors.listAll(opts as any)) {
+      results.push(item);
+      if (results.length >= maxItems) break;
+    }
+    return successResult({ data: results, count: results.length, truncated: results.length >= maxItems });
+  } catch (error) {
+    return errorResult('monitors.getAll', error);
+  }
+};
+
 export const runsList: OperationHandler = async (args, exa) => {
+  const guard = requireParams('monitors.runs.list', args, 'monitorId');
+  if (guard) return guard;
   try {
     const opts: Record<string, unknown> = {};
     if (args.limit) opts.limit = args.limit;
@@ -118,6 +132,8 @@ export const runsList: OperationHandler = async (args, exa) => {
 };
 
 export const runsGet: OperationHandler = async (args, exa) => {
+  const guard = requireParams('monitors.runs.get', args, 'monitorId', 'runId');
+  if (guard) return guard;
   try {
     const response = await exa.websets.monitors.runs.get(
       args.monitorId as string,
