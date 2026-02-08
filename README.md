@@ -48,7 +48,7 @@ This server exposes a **single MCP tool** called `manage_websets` that dispatche
 
 ## Workflow Tasks
 
-Long-running background tasks orchestrate multi-step research patterns. Create them with `tasks.create` and poll with `tasks.get` / `tasks.result`.
+Long-running background tasks orchestrate multi-step research patterns. Create them with `tasks.create` and poll with `tasks.get` / `tasks.result`. For conceptual explanations of when and why to use each workflow, see [WORKFLOWS.md](./WORKFLOWS.md).
 
 | Type | Description | Key Args |
 |------|-------------|----------|

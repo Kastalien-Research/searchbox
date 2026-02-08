@@ -38,7 +38,8 @@
     "test:e2e": "vitest run src/__tests__/e2e/",
     "test:workflows": "vitest run src/workflows/__tests__/",
     "docker:up": "docker compose up --build",
-    "docker:down": "docker compose down"
+    "docker:down": "docker compose down",
+    "db:init": "bash research-workflows/init-db.sh"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.x",
