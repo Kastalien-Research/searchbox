@@ -14,6 +14,7 @@ import * as imports from '../handlers/imports.js';
 import * as events from '../handlers/events.js';
 import * as tasks from '../handlers/tasks.js';
 import * as research from '../handlers/research.js';
+import * as exaSearch from '../handlers/exa.js';
 
 // Side-effect imports: register workflows in the registry
 import '../workflows/echo.js';
@@ -116,6 +117,12 @@ const OPERATIONS: Record<string, OperationMeta> = {
   'research.get': { handler: research.get, summary: 'Get research status (args: researchId, events?)' },
   'research.list': { handler: research.list, summary: 'List research requests (args: cursor?, limit?)' },
   'research.pollUntilFinished': { handler: research.pollUntilFinished, summary: 'Poll until research completes (args: researchId, pollInterval?, timeoutMs?, events?)' },
+
+  // Exa Search API domain (synchronous web search)
+  'exa.search': { handler: exaSearch.search, summary: 'Instant web search (args: query, type?, numResults?, category?, includeDomains?, excludeDomains?, startCrawlDate?, endCrawlDate?, startPublishedDate?, endPublishedDate?, contents?, includeText?, excludeText?, additionalQueries?, userLocation?, moderation?, useAutoprompt?)' },
+  'exa.findSimilar': { handler: exaSearch.findSimilar, summary: 'Find pages similar to a URL (args: url, numResults?, excludeSourceDomain?, includeDomains?, excludeDomains?, startCrawlDate?, endCrawlDate?, startPublishedDate?, endPublishedDate?, contents?, includeText?, excludeText?, category?, userLocation?)' },
+  'exa.getContents': { handler: exaSearch.getContents, summary: 'Extract content from URLs (args: urls, text?, highlights?, summary?, livecrawl?, livecrawlTimeout?, maxAgeHours?, subpages?, subpageTarget?, extras?, context?)' },
+  'exa.answer': { handler: exaSearch.answer, summary: 'Question answering with citations (args: query, text?, model?, systemPrompt?, outputSchema?, userLocation?)' },
 };
 
 const OPERATION_NAMES = Object.keys(OPERATIONS) as [string, ...string[]];
@@ -132,12 +139,16 @@ function buildToolDescription(): string {
     .map(([domain, ops]) => `${domain.toUpperCase()}:\n${ops.join('\n')}`)
     .join('\n\n');
 
-  return `Manage Exa Websets — unified tool for all websets operations.
+  return `Manage Exa Websets & Search API — unified tool for all Exa operations.
 
 Choose an operation and pass its arguments in the args object.
 
 QUICK START:
-- Simple entity search: websets.create → websets.waitUntilIdle → items.getAll
+- Instant web search: exa.search
+- Find similar pages: exa.findSimilar
+- Extract page content: exa.getContents
+- Question answering with citations: exa.answer
+- Entity collection (webset): websets.create → websets.waitUntilIdle → items.getAll
 - Search + enrich + collect in one task: tasks.create type=lifecycle.harvest
 - Multi-angle triangulation: tasks.create type=convergent.search
 - Quality-diversity analysis: tasks.create type=qd.winnow
