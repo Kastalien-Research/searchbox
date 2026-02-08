@@ -1,24 +1,10 @@
-# Exa Websets MCP Server
+# schwartz13
 
-[![smithery badge](https://smithery.ai/badge/@exa-labs/websets-mcp-server)](https://smithery.ai/server/@exa-labs/websets-mcp-server)
-
-A Model Context Protocol (MCP) server that integrates [Exa's Websets API](https://docs.exa.ai/reference/websets) with Claude Desktop, Cursor, Windsurf, and other MCP-compatible clients.
-
-## What are Websets?
-
-Websets are collections of web entities (companies, people, research papers) that can be automatically discovered, verified, and enriched with custom data. Think of them as smart, self-updating spreadsheets powered by AI web research.
-
-**Key capabilities:**
-- **Automated Search**: Find entities matching natural language criteria
-- **Data Enrichment**: Extract custom information using AI agents
-- **Monitoring**: Schedule automatic updates to keep collections fresh
-- **Verification**: AI validates that entities meet your criteria
-- **Webhooks**: Real-time notifications for collection updates
-- **Workflows**: Long-running background tasks for multi-step research patterns
+An MCP server for [Exa's Websets API](https://docs.exa.ai/reference/websets). Websets are self-updating collections of web entities (companies, people, papers) with search, enrichment, and monitoring capabilities.
 
 ## Unified Tool
 
-This server exposes a **single MCP tool** called `manage_websets` that dispatches to 56 operations across 10 domains. Every call follows the same pattern:
+A single MCP tool (`manage_websets`) dispatches to 56 operations across 10 domains:
 
 ```json
 {
@@ -46,22 +32,32 @@ This server exposes a **single MCP tool** called `manage_websets` that dispatche
 | **tasks** | create, get, result, list, cancel | 5 |
 | **research** | create, get, list, pollUntilFinished | 4 |
 
+## Response Projections
+
+All responses pass through domain-specific projection functions that extract decision-relevant fields and strip noise. This reduces agent context consumption by 10-100x per response.
+
+- **Bulk items** filter out entities that failed all criteria evaluations
+- **Entity type** promoted to top level (no more parsing `properties.type`)
+- **Stripped**: timestamps, config objects, content blobs, reasoning chains, references
+- **Preserved**: metadata, status, IDs, enrichment results
+- **`items.get`** returns full raw response for single-item inspection
+
 ## Workflow Tasks
 
-Long-running background tasks orchestrate multi-step research patterns. Create them with `tasks.create` and poll with `tasks.get` / `tasks.result`. For conceptual explanations of when and why to use each workflow, see [WORKFLOWS.md](./WORKFLOWS.md).
+Long-running background tasks orchestrate multi-step research patterns. Create with `tasks.create`, poll with `tasks.get` / `tasks.result`.
 
 | Type | Description | Key Args |
 |------|-------------|----------|
-| `lifecycle.harvest` | Search + enrich + collect (simplest end-to-end) | query, entity, enrichments?, count? |
-| `convergent.search` | N queries from different angles, deduplicate, find intersection | queries, entity, criteria?, count? |
-| `adversarial.verify` | Thesis vs antithesis websets + optional synthesis | thesis, thesisQuery, antithesisQuery, synthesize? |
-| `qd.winnow` | Quality-diversity: criteria as coordinates, enrichments as fitness | query, entity, criteria, enrichments, selectionStrategy? |
+| `lifecycle.harvest` | Search + enrich + collect | query, entity, enrichments?, count? |
+| `convergent.search` | N queries, deduplicate, find intersection | queries, entity, criteria?, count? |
+| `adversarial.verify` | Thesis vs antithesis + optional synthesis | thesis, thesisQuery, antithesisQuery, synthesize? |
+| `qd.winnow` | Quality-diversity: criteria x enrichments | query, entity, criteria, enrichments, selectionStrategy? |
 | `research.deep` | Exa Research API question answering | instructions, model?, outputSchema? |
-| `research.verifiedCollection` | Entity collection + per-entity deep research | query, entity, researchPrompt, researchLimit? |
+| `research.verifiedCollection` | Collection + per-entity deep research | query, entity, researchPrompt, researchLimit? |
 
-### Workflow Examples
+### Examples
 
-**Search + enrich + collect in one step:**
+**Search + enrich + collect:**
 ```json
 {
   "operation": "tasks.create",
@@ -98,15 +94,13 @@ Long-running background tasks orchestrate multi-step research patterns. Create t
 }
 ```
 
-**Check task progress / get results:**
+**Check progress / get results:**
 ```json
 {"operation": "tasks.get", "args": {"taskId": "task_abc123"}}
 {"operation": "tasks.result", "args": {"taskId": "task_abc123"}}
 ```
 
 ## Parameter Format Rules
-
-AI callers commonly get these wrong:
 
 | Parameter | Correct | Wrong |
 |-----------|---------|-------|
@@ -117,30 +111,18 @@ AI callers commonly get these wrong:
 
 ## Installation
 
-### Installing via Smithery
-
-```bash
-npx -y @smithery/cli install @exa-labs/websets-mcp-server
-```
-
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) v20 or higher
+- [Node.js](https://nodejs.org/) v20+
 - An Exa API key from [exa.ai](https://exa.ai)
 
-### Using Claude Code (Recommended)
+### Claude Code
 
 ```bash
-claude mcp add websets -e EXA_API_KEY=YOUR_API_KEY -- npx -y websets-mcp-server
+claude mcp add schwartz13 -e EXA_API_KEY=YOUR_API_KEY -- npx -y schwartz13
 ```
 
-### Using NPX
-
-```bash
-npx -y websets-mcp-server
-```
-
-### Using Docker
+### Docker
 
 ```bash
 EXA_API_KEY=your-key docker compose up --build
@@ -148,41 +130,30 @@ EXA_API_KEY=your-key docker compose up --build
 
 The server starts on port 7860 by default.
 
-## Configuration
-
 ### Claude Desktop
 
-1. Open Claude Desktop → Enable Developer Mode → Settings → Developer → Edit Config
-
-2. Add to configuration file:
-
-   **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-   **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
-
-   ```json
-   {
-     "mcpServers": {
-       "websets": {
-         "command": "npx",
-         "args": ["-y", "websets-mcp-server"],
-         "env": {
-           "EXA_API_KEY": "your-api-key-here"
-         }
-       }
-     }
-   }
-   ```
-
-3. Restart Claude Desktop
-
-### HTTP Server (Cursor, Claude Code, etc.)
-
-The server runs as an HTTP endpoint using StreamableHTTP transport:
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
 
 ```json
 {
   "mcpServers": {
-    "websets": {
+    "schwartz13": {
+      "command": "npx",
+      "args": ["-y", "schwartz13"],
+      "env": {
+        "EXA_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}
+```
+
+### HTTP Server (Cursor, etc.)
+
+```json
+{
+  "mcpServers": {
+    "schwartz13": {
       "type": "http",
       "url": "http://localhost:7860/mcp"
     }
@@ -190,121 +161,47 @@ The server runs as an HTTP endpoint using StreamableHTTP transport:
 }
 ```
 
-## Usage Examples
-
-### Simple Entity Search
-
-```
-Create a webset of AI startups in San Francisco with 20 companies.
-Add enrichments for revenue, employee count, and funding stage.
-```
-
-### End-to-End Workflow
-
-```
-Use lifecycle.harvest to find 25 AI companies in healthcare,
-enrich with CEO name and annual revenue, then show me the results.
-```
-
-### Deep Research
-
-```
-Use research.deep to answer: "What are the leading approaches
-to protein folding prediction as of 2025?"
-```
-
-### Adversarial Verification
-
-```
-Use adversarial.verify to test the thesis "Remote work improves
-developer productivity" — search for supporting and counter-evidence.
-```
-
-## Troubleshooting
-
-### Connection Issues
-
-1. Verify your API key is valid
-2. Ensure there are no spaces or quotes around the API key
-3. Completely restart your MCP client
-4. Check the MCP logs for error messages
-
-### API Rate Limits
-
-- Check your plan limits at [exa.ai/dashboard](https://exa.ai/dashboard)
-- Use pagination for large websets (items.getAll with maxItems)
-- Monitor API usage in your dashboard
-
-### Common Errors
-
-- **401 Unauthorized**: Invalid or missing API key
-- **404 Not Found**: Webset ID doesn't exist or was deleted
-- **422 Unprocessable**: Invalid query or criteria format — check parameter format rules above
-- **429 Rate Limited**: Too many requests, wait and retry
-
 ## Development
 
-### Building from Source
-
 ```bash
-git clone https://github.com/exa-labs/websets-mcp-server.git
-cd websets-mcp-server
+git clone https://github.com/Kastalien-Research/schwartz13.git
+cd schwartz13
 npm install
 npm run build
 npm start
 ```
 
+### Test Scripts
+
+```bash
+npm test                 # Full suite (~365 tests)
+npm run test:unit        # Unit tests only
+npm run test:integration # Integration tests (requires EXA_API_KEY)
+npm run test:e2e         # End-to-end tests
+npm run test:workflows   # Workflow tests only
+```
+
 ### Project Structure
 
 ```
-websets-mcp-server/
+schwartz13/
 ├── src/
 │   ├── index.ts                 # Express server + MCP transport
 │   ├── server.ts                # Server factory (createServer)
 │   ├── tools/
 │   │   └── manageWebsets.ts     # Unified dispatcher (56 operations)
-│   ├── handlers/                # Domain handlers
-│   │   ├── types.ts             # ToolResult, OperationHandler types
-│   │   ├── websets.ts           # Webset CRUD + convenience ops
-│   │   ├── searches.ts          # Search operations
-│   │   ├── items.ts             # Item operations
-│   │   ├── enrichments.ts       # Enrichment operations
-│   │   ├── monitors.ts          # Monitor + runs operations
-│   │   ├── webhooks.ts          # Webhook operations
-│   │   ├── imports.ts           # Import operations
-│   │   ├── events.ts            # Event operations
-│   │   ├── tasks.ts             # Background task orchestrator
-│   │   └── research.ts          # Exa Research API
-│   ├── workflows/               # Long-running task workflows
-│   │   ├── types.ts             # Workflow registry
-│   │   ├── helpers.ts           # Shared utilities + validators
-│   │   ├── echo.ts              # Test workflow
-│   │   ├── qdWinnow.ts          # Quality-diversity search
-│   │   ├── lifecycle.ts         # Search + enrich + collect
-│   │   ├── convergent.ts        # Multi-query triangulation
-│   │   ├── adversarial.ts       # Thesis vs antithesis
-│   │   ├── researchDeep.ts      # Research API wrapper
-│   │   └── verifiedCollection.ts # Collection + per-entity research
+│   ├── handlers/                # Domain handlers (10 files)
+│   ├── workflows/               # Long-running task workflows (8 files)
 │   ├── lib/
 │   │   ├── exa.ts               # Exa client singleton
+│   │   ├── projections.ts       # Response projection layer
 │   │   ├── taskStore.ts         # In-memory task state store
 │   │   └── semaphore.ts         # Concurrency limiter
 │   └── utils/
 │       └── logger.ts            # Debug logging
-├── package.json
-├── tsconfig.json
+├── docs/adr/                    # Architecture decision records
 ├── Dockerfile
 └── docker-compose.yml
-```
-
-### Test Scripts
-
-```bash
-npm test                 # Full suite
-npm run test:unit        # Unit tests only
-npm run test:integration # Integration tests (requires EXA_API_KEY)
-npm run test:e2e         # End-to-end tests
-npm run test:workflows   # Workflow tests only
 ```
 
 ## Resources
@@ -312,18 +209,7 @@ npm run test:workflows   # Workflow tests only
 - [Exa Websets Documentation](https://docs.exa.ai/reference/websets)
 - [Exa Dashboard](https://exa.ai/dashboard)
 - [MCP Protocol Specification](https://modelcontextprotocol.io/)
-- [Get an Exa API Key](https://exa.ai)
 
 ## License
 
 MIT
-
-## Contributing
-
-Contributions welcome! Please open an issue or PR at [github.com/exa-labs/websets-mcp-server](https://github.com/exa-labs/websets-mcp-server).
-
-## Support
-
-- Documentation: [docs.exa.ai](https://docs.exa.ai)
-- Discord: [Join the Exa community](https://discord.gg/exa)
-- Email: support@exa.ai
