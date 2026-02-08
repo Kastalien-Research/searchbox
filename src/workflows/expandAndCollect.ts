@@ -23,8 +23,8 @@ async function expandAndCollectWorkflow(
   if (args.startPublishedDate) searchOpts.startPublishedDate = args.startPublishedDate;
   if (args.endPublishedDate) searchOpts.endPublishedDate = args.endPublishedDate;
 
-  // Step 1: Initial search
-  store.updateProgress(taskId, { step: 'searching', completed: 1, total: 3 });
+  // Step 1: Initial search (use expandTop as estimate before we know actual count)
+  store.updateProgress(taskId, { step: 'searching', completed: 1, total: 2 + expandTop + 1 });
   const searchResponse = await exa.search(query, searchOpts as any);
   const initialResults = (searchResponse as any).results ?? [];
 
@@ -32,7 +32,7 @@ async function expandAndCollectWorkflow(
 
   // Step 2-N: Expand top results via findSimilar
   const expandCount = Math.min(expandTop, initialResults.length);
-  const totalSteps = 2 + expandCount + 1; // search + N expansions + deduplicate
+  const totalSteps = 2 + expandCount + 1; // search + actual expansions + deduplicate
   const expandedResults: any[][] = [];
 
   for (let i = 0; i < expandCount; i++) {

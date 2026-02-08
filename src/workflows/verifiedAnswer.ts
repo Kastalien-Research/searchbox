@@ -34,7 +34,7 @@ async function verifiedAnswerWorkflow(
   store.updateProgress(taskId, { step: 'validating', completed: 2, total: 4, message: 'Independent search for corroboration' });
   const searchResponse = await exa.search(query, { numResults: numValidation } as any);
   const validationResults = (searchResponse as any).results ?? [];
-  const validationUrls = validationResults.map((r: any) => r.url).filter(Boolean) as string[];
+  const validationUrls = [...new Set(validationResults.map((r: any) => r.url).filter(Boolean) as string[])];
 
   if (isCancelled(taskId, store)) return null;
 
