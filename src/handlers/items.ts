@@ -1,6 +1,29 @@
 import type { Exa } from 'exa-js';
+import { z } from 'zod';
 import { OperationHandler, successResult, errorResult, requireParams } from './types.js';
 import { filterAndProjectItems } from '../lib/projections.js';
+
+export const Schemas = {
+  list: z.object({
+    websetId: z.string(),
+    limit: z.number().optional(),
+    cursor: z.string().optional(),
+  }),
+  get: z.object({
+    websetId: z.string(),
+    itemId: z.string(),
+  }),
+  getAll: z.object({
+    websetId: z.string(),
+    maxItems: z.number().optional(),
+    sourceId: z.string().optional(),
+  }),
+  del: z.object({
+    websetId: z.string(),
+    itemId: z.string(),
+  }),
+};
+
 
 export const list: OperationHandler = async (args, exa) => {
   const guard = requireParams('items.list', args, 'websetId');

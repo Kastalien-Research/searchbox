@@ -162,6 +162,28 @@ Precedence:
 - Per-call `args.compat.mode` takes precedence over server default.
 - Use `args.compat.mode = "strict"` to force strict validation on a specific call when server default is `safe`.
 
+### Dry-Run Coercion Preview
+
+To preview coercions without executing the operation:
+
+```json
+{
+  "operation": "searches.create",
+  "args": {
+    "compat": { "mode": "safe", "preview": true },
+    "websetId": "ws_abc123",
+    "query": "AI startups",
+    "entity": "company"
+  }
+}
+```
+
+Preview responses include:
+- `preview: true`
+- `execution: "skipped"`
+- `normalizedArgs`
+- `_coercions` and `_warnings` (if applicable)
+
 ## Installation
 
 ### Prerequisites

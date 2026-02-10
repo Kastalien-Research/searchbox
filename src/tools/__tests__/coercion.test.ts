@@ -7,6 +7,8 @@ describe('applyCompatCoercions', () => {
     const result = applyCompatCoercions('searches.create', input);
 
     expect(result.enabled).toBe(false);
+    expect(result.preview).toBe(false);
+    expect(result.effectiveMode).toBe('strict');
     expect(result.args).toEqual(input);
     expect(result.coercions).toHaveLength(0);
   });
@@ -20,6 +22,8 @@ describe('applyCompatCoercions', () => {
     });
 
     expect(result.enabled).toBe(true);
+    expect(result.preview).toBe(false);
+    expect(result.effectiveMode).toBe('safe');
     expect(result.args.entity).toEqual({ type: 'company' });
     expect(result.args.criteria).toEqual([{ description: 'has funding' }]);
     expect(result.args.count).toBe(25);
@@ -41,6 +45,7 @@ describe('applyCompatCoercions', () => {
     );
 
     expect(result.enabled).toBe(true);
+    expect(result.effectiveMode).toBe('safe');
     expect(result.args.entity).toEqual({ type: 'company' });
     expect(result.args.criteria).toEqual([{ description: 'has funding' }]);
   });
@@ -56,8 +61,20 @@ describe('applyCompatCoercions', () => {
     );
 
     expect(result.enabled).toBe(false);
+    expect(result.effectiveMode).toBe('strict');
     expect(result.args.entity).toBe('company');
     expect(result.coercions).toHaveLength(0);
+  });
+
+  it('supports preview flag', () => {
+    const result = applyCompatCoercions('searches.create', {
+      compat: { mode: 'safe', preview: true },
+      entity: 'company',
+    });
+
+    expect(result.preview).toBe(true);
+    expect(result.enabled).toBe(true);
+    expect(result.args.entity).toEqual({ type: 'company' });
   });
 
   it('coerces nested tasks.create args safely', () => {
@@ -121,6 +138,17 @@ describe('applyCompatCoercions', () => {
     expect(result.args.entity).toBe('company');
     expect(result.warnings).toEqual([
       'Unsupported compat mode "aggressive"; ignored.',
+    ]);
+  });
+
+  it('warns on invalid preview value', () => {
+    const result = applyCompatCoercions('searches.create', {
+      compat: { mode: 'safe', preview: 'yes' },
+    });
+
+    expect(result.preview).toBe(false);
+    expect(result.warnings).toEqual([
+      'Invalid compat preview value "yes"; expected boolean.',
     ]);
   });
 });

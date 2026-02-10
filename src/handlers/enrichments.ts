@@ -1,6 +1,38 @@
 import type { Exa } from 'exa-js';
+import { z } from 'zod';
 import { OperationHandler, successResult, errorResult, requireParams, validationError } from './types.js';
 import { projectEnrichment } from '../lib/projections.js';
+
+export const Schemas = {
+  create: z.object({
+    websetId: z.string(),
+    description: z.string(),
+    format: z.enum(['text', 'date', 'number', 'options', 'email', 'phone', 'url']).optional(),
+    options: z.array(z.object({ label: z.string() })).max(150).optional(),
+    metadata: z.record(z.string()).optional(),
+  }),
+  get: z.object({
+    websetId: z.string(),
+    enrichmentId: z.string(),
+  }),
+  cancel: z.object({
+    websetId: z.string(),
+    enrichmentId: z.string(),
+  }),
+  update: z.object({
+    websetId: z.string(),
+    enrichmentId: z.string(),
+    description: z.string().optional(),
+    format: z.enum(['text', 'date', 'number', 'options', 'email', 'phone', 'url']).optional(),
+    options: z.array(z.object({ label: z.string() })).max(150).optional(),
+    metadata: z.record(z.string()).optional(),
+  }),
+  del: z.object({
+    websetId: z.string(),
+    enrichmentId: z.string(),
+  }),
+};
+
 
 const ENRICHMENT_HINTS = `Common issues:
 - options must be array of objects: [{label: "option"}]

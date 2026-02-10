@@ -110,19 +110,19 @@ describe('Handler modules export expected operations', () => {
     expect(typeof exaSearch.answer).toBe('function');
   });
 
-  it('total handler count is 60', () => {
+  it('total operation count is 71 (60 handlers + 11 schema objects)', () => {
     const handlerCount =
-      Object.keys(websets).length +    // 9
-      Object.keys(searches).length +   // 3
-      Object.keys(items).length +      // 4
-      Object.keys(enrichments).length + // 5
-      Object.keys(monitors).length +   // 8
-      Object.keys(webhooks).length +   // 8
-      Object.keys(imports).length +    // 7
-      Object.keys(events).length +     // 3
-      Object.keys(tasks).length +      // 5
-      Object.keys(research).length +   // 4
-      Object.keys(exaSearch).length;   // 4
-    expect(handlerCount).toBe(60);
+      Object.keys(websets).length +     // 10 (9 + 1)
+      Object.keys(searches).length +    // 4  (3 + 1)
+      Object.keys(items).length +       // 5  (4 + 1)
+      Object.keys(enrichments).length + // 6  (5 + 1)
+      Object.keys(monitors).length +    // 9  (8 + 1)
+      Object.keys(webhooks).length +    // 9  (8 + 1)
+      Object.keys(imports).length +     // 8  (7 + 1)
+      Object.keys(events).length +      // 4  (3 + 1)
+      Object.keys(tasks).length +      // 6  (5 + 1)
+      Object.keys(research).length +   // 5  (4 + 1)
+      Object.keys(exaSearch).length;   // 5  (4 + 1)
+    expect(handlerCount).toBe(71);
   });
 });

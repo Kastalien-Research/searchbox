@@ -1,6 +1,60 @@
 import type { Exa } from 'exa-js';
+import { z } from 'zod';
 import { OperationHandler, successResult, errorResult, requireParams } from './types.js';
 import { projectWebset } from '../lib/projections.js';
+
+export const Schemas = {
+  create: z.object({
+    name: z.string().optional(),
+    description: z.string().optional(),
+    externalId: z.string().optional(),
+    metadata: z.record(z.string()).optional(),
+    searchQuery: z.string().optional(),
+    searchCount: z.number().optional(),
+    searchCriteria: z.array(z.object({ description: z.string() })).optional(),
+    entity: z.object({ type: z.string() }).optional(),
+    enrichments: z.array(
+      z.object({
+        description: z.string(),
+        format: z.string().optional(),
+        options: z.array(z.object({ label: z.string() })).max(150).optional(),
+      }),
+    ).optional(),
+  }),
+  get: z.object({
+    id: z.string(),
+    expand: z.array(z.string()).optional(),
+  }),
+  list: z.object({
+    limit: z.number().optional(),
+    cursor: z.string().optional(),
+  }),
+  update: z.object({
+    id: z.string(),
+    metadata: z.record(z.string()).optional(),
+  }),
+  del: z.object({
+    id: z.string(),
+  }),
+  cancel: z.object({
+    id: z.string(),
+  }),
+  waitUntilIdle: z.object({
+    id: z.string(),
+    timeout: z.number().optional(),
+    pollInterval: z.number().optional(),
+  }),
+  getAll: z.object({
+    maxItems: z.number().optional(),
+  }),
+  preview: z.object({
+    query: z.string(),
+    count: z.number().optional(),
+    entity: z.object({ type: z.string() }).optional(),
+    search: z.boolean().optional(),
+  }),
+};
+
 
 export const create: OperationHandler = async (args, exa) => {
   try {

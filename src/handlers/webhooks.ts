@@ -1,6 +1,48 @@
 import type { Exa } from 'exa-js';
+import { z } from 'zod';
 import { OperationHandler, successResult, errorResult, requireParams } from './types.js';
 import { projectWebhook, projectWebhookAttempt } from '../lib/projections.js';
+
+export const Schemas = {
+  create: z.object({
+    url: z.string().url(),
+    events: z.array(z.string()),
+    metadata: z.record(z.string()).optional(),
+  }),
+  get: z.object({
+    id: z.string(),
+  }),
+  list: z.object({
+    limit: z.number().optional(),
+    cursor: z.string().optional(),
+  }),
+  update: z.object({
+    id: z.string(),
+    url: z.string().url().optional(),
+    events: z.array(z.string()).optional(),
+    metadata: z.record(z.string()).optional(),
+  }),
+  del: z.object({
+    id: z.string(),
+  }),
+  getAll: z.object({
+    maxItems: z.number().optional(),
+  }),
+  getAllAttempts: z.object({
+    id: z.string(),
+    maxItems: z.number().optional(),
+    eventType: z.string().optional(),
+    successful: z.boolean().optional(),
+  }),
+  listAttempts: z.object({
+    id: z.string(),
+    limit: z.number().optional(),
+    cursor: z.string().optional(),
+    eventType: z.string().optional(),
+    successful: z.boolean().optional(),
+  }),
+};
+
 
 export const create: OperationHandler = async (args, exa) => {
   const guard = requireParams('webhooks.create', args, 'url', 'events');

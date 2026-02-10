@@ -1,6 +1,23 @@
 import type { Exa } from 'exa-js';
+import { z } from 'zod';
 import { OperationHandler, successResult, errorResult, requireParams } from './types.js';
 import { projectEvent } from '../lib/projections.js';
+
+export const Schemas = {
+  list: z.object({
+    limit: z.number().optional(),
+    cursor: z.string().optional(),
+    types: z.array(z.string()).optional(),
+  }),
+  getAll: z.object({
+    maxItems: z.number().optional(),
+    types: z.array(z.string()).optional(),
+  }),
+  get: z.object({
+    id: z.string(),
+  }),
+};
+
 
 export const list: OperationHandler = async (args, exa) => {
   try {

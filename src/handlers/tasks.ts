@@ -1,10 +1,31 @@
+import { z } from 'zod';
 import type { OperationHandler } from './types.js';
 import { successResult, errorResult, requireParams } from './types.js';
 import { taskStore } from '../lib/taskStore.js';
 import { workflowRegistry } from '../workflows/types.js';
 import { WorkflowError } from '../workflows/helpers.js';
 
+export const Schemas = {
+  create: z.object({
+    type: z.string(),
+    args: z.record(z.string(), z.unknown()).optional(),
+  }).catchall(z.unknown()), // Allow flattened arguments
+  get: z.object({
+    taskId: z.string(),
+  }),
+  result: z.object({
+    taskId: z.string(),
+  }),
+  list: z.object({
+    status: z.enum(['pending', 'running', 'completed', 'failed', 'cancelled']).optional(),
+  }),
+  cancel: z.object({
+    taskId: z.string(),
+  }),
+};
+
 export const create: OperationHandler = async (args, exa) => {
+
   const guard = requireParams('tasks.create', args, 'type');
   if (guard) return guard;
 
@@ -16,8 +37,10 @@ export const create: OperationHandler = async (args, exa) => {
   }
 
   try {
-    const taskArgs = (args.args as Record<string, unknown>) ?? args;
+    const { type: _type, args: _args, ...rest } = args;
+    const taskArgs = (_args as Record<string, unknown>) ?? rest;
     const task = taskStore.create(type, taskArgs);
+
 
     void workflow(task.id, taskArgs, exa, taskStore)
       .then(result => taskStore.setResult(task.id, result))

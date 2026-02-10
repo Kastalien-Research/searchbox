@@ -1,6 +1,53 @@
 import type { Exa } from 'exa-js';
+import { z } from 'zod';
 import { OperationHandler, successResult, errorResult, requireParams, validationError } from './types.js';
 import { projectMonitor, projectMonitorRun } from '../lib/projections.js';
+
+export const Schemas = {
+  create: z.object({
+    websetId: z.string(),
+    cron: z.string().regex(/^\S+\s+\S+\s+\S+\s+\S+\s+\S+$/, 'Must have exactly 5 fields'),
+    timezone: z.string().optional(),
+    query: z.string().optional(),
+    criteria: z.array(z.object({ description: z.string() })).optional(),
+    entity: z.object({ type: z.string() }).optional(),
+    count: z.number().min(1).optional(),
+    behavior: z.any().optional(),
+    metadata: z.record(z.string()).optional(),
+  }),
+  get: z.object({
+    id: z.string(),
+  }),
+  list: z.object({
+    limit: z.number().optional(),
+    cursor: z.string().optional(),
+    websetId: z.string().optional(),
+  }),
+  update: z.object({
+    id: z.string(),
+    cadence: z.any().optional(),
+    behavior: z.any().optional(),
+    metadata: z.record(z.string()).optional(),
+    status: z.enum(['active', 'paused', 'deleted']).optional(),
+  }),
+  del: z.object({
+    id: z.string(),
+  }),
+  getAll: z.object({
+    maxItems: z.number().optional(),
+    websetId: z.string().optional(),
+  }),
+  runsList: z.object({
+    monitorId: z.string(),
+    limit: z.number().optional(),
+    cursor: z.string().optional(),
+  }),
+  runsGet: z.object({
+    monitorId: z.string(),
+    runId: z.string(),
+  }),
+};
+
 
 export const create: OperationHandler = async (args, exa) => {
   const guard = requireParams('monitors.create', args, 'websetId', 'cron');

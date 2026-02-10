@@ -62,6 +62,16 @@ Precedence rules:
 - Per-call `args.compat.mode` overrides server default.
 - `args.compat.mode = "strict"` forces strict validation for that call.
 
+### Dry-Run Coercion Preview
+
+Set `args.compat.preview = true` to preview coercions without executing the operation.
+
+Preview response includes:
+- `preview: true`
+- `execution: "skipped"`
+- `normalizedArgs`
+- `_coercions` / `_warnings` when relevant
+
 ---
 
 ## Core CRUD Operations

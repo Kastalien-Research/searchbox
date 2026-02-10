@@ -27,7 +27,7 @@ describe.skipIf(!HAS_API_KEY)('MCP Transport E2E', () => {
   it('tool call: websets.list returns data', async () => {
     const result = await ctx.client.callTool({
       name: 'manage_websets',
-      arguments: { operation: 'websets.list', args: { limit: 1 } },
+      arguments: { operation: 'websets.list', limit: 1 },
     });
     expect(result.isError).toBeFalsy();
     expect(result.content).toBeDefined();
@@ -37,7 +37,7 @@ describe.skipIf(!HAS_API_KEY)('MCP Transport E2E', () => {
   it('tool call: unknown operation returns error', async () => {
     const result = await ctx.client.callTool({
       name: 'manage_websets',
-      arguments: { operation: 'nonexistent.op', args: {} },
+      arguments: { operation: 'nonexistent.op' } as any,
     });
     // The dispatcher validates operation via zod enum, so the SDK may throw
     // or return an error result depending on how the server handles it
@@ -49,7 +49,8 @@ describe.skipIf(!HAS_API_KEY)('MCP Transport E2E', () => {
       name: 'manage_websets',
       arguments: {
         operation: 'websets.preview',
-        args: { query: 'AI research labs', count: 2 },
+        query: 'AI research labs',
+        count: 2,
       },
     });
     expect(result.isError).toBeFalsy();
@@ -66,11 +67,9 @@ describe.skipIf(!HAS_API_KEY)('MCP Transport E2E', () => {
         name: 'manage_websets',
         arguments: {
           operation: 'websets.create',
-          args: {
-            searchQuery: 'E2E test companies',
-            searchCount: 5,
-            entity: { type: 'company' },
-          },
+          searchQuery: 'E2E test companies',
+          searchCount: 5,
+          entity: { type: 'company' },
         },
       });
       expect(createResult.isError).toBeFalsy();
@@ -84,7 +83,7 @@ describe.skipIf(!HAS_API_KEY)('MCP Transport E2E', () => {
         name: 'manage_websets',
         arguments: {
           operation: 'websets.get',
-          args: { id: websetId },
+          id: websetId,
         },
       });
       expect(getResult.isError).toBeFalsy();
@@ -97,7 +96,7 @@ describe.skipIf(!HAS_API_KEY)('MCP Transport E2E', () => {
         name: 'manage_websets',
         arguments: {
           operation: 'websets.cancel',
-          args: { id: websetId },
+          id: websetId,
         },
       });
       expect(cancelResult.isError).toBeFalsy();
@@ -108,7 +107,7 @@ describe.skipIf(!HAS_API_KEY)('MCP Transport E2E', () => {
           name: 'manage_websets',
           arguments: {
             operation: 'websets.delete',
-            args: { id: websetId },
+            id: websetId,
           },
         });
       }

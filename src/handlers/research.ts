@@ -1,5 +1,29 @@
+import { z } from 'zod';
 import type { OperationHandler } from './types.js';
 import { successResult, errorResult, requireParams } from './types.js';
+
+export const Schemas = {
+  create: z.object({
+    instructions: z.string(),
+    model: z.enum(['exa-research', 'exa-research-pro']).optional(),
+    outputSchema: z.record(z.string(), z.unknown()).optional(),
+  }),
+  get: z.object({
+    researchId: z.string(),
+    events: z.boolean().optional(),
+  }),
+  list: z.object({
+    cursor: z.string().optional(),
+    limit: z.number().optional(),
+  }),
+  pollUntilFinished: z.object({
+    researchId: z.string(),
+    pollInterval: z.number().optional(),
+    timeoutMs: z.number().optional(),
+    events: z.boolean().optional(),
+  }),
+};
+
 import { projectResearch } from '../lib/projections.js';
 
 export const create: OperationHandler = async (args, exa) => {

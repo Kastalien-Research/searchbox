@@ -9,6 +9,8 @@ export type CompatMode = 'safe' | 'strict';
 export interface CoercionResult {
   args: Record<string, unknown>;
   enabled: boolean;
+  preview: boolean;
+  effectiveMode: CompatMode;
   coercions: AppliedCoercion[];
   warnings: string[];
 }
@@ -255,6 +257,19 @@ export function applyCompatCoercions(
       ? (compatRaw as Record<string, unknown>).mode
       : undefined
   );
+  const previewRaw = (
+    compatRaw &&
+    typeof compatRaw === 'object' &&
+    !Array.isArray(compatRaw)
+      ? (compatRaw as Record<string, unknown>).preview
+      : undefined
+  );
+  let preview = false;
+  if (previewRaw === true) {
+    preview = true;
+  } else if (previewRaw !== undefined && previewRaw !== false) {
+    warnings.push(`Invalid compat preview value "${String(previewRaw)}"; expected boolean.`);
+  }
 
   let effectiveMode: CompatMode = defaultMode;
   if (mode === 'safe' || mode === 'strict') {
@@ -265,9 +280,23 @@ export function applyCompatCoercions(
   }
 
   if (effectiveMode !== 'safe') {
-    return { args: working, enabled: false, coercions, warnings };
+    return {
+      args: working,
+      enabled: false,
+      preview,
+      effectiveMode,
+      coercions,
+      warnings,
+    };
   }
 
   const normalized = coerceArgsForOperation(operation, working, coercions);
-  return { args: normalized, enabled: true, coercions, warnings };
+  return {
+    args: normalized,
+    enabled: true,
+    preview,
+    effectiveMode,
+    coercions,
+    warnings,
+  };
 }

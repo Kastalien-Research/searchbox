@@ -105,6 +105,7 @@ AI callers commonly get these wrong:
 - `entity` must be `{type: "company"}` (object, not string)
 - `options` must be `[{label: "..."}]` (array of objects, not strings)
 - `cron` must be 5-field format: `"minute hour day month weekday"`
+- `compat.preview = true` performs a dry-run coercion preview and skips execution
 
 ## Testing
 

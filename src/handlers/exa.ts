@@ -1,5 +1,74 @@
+import { z } from 'zod';
 import type { OperationHandler } from './types.js';
 import { successResult, errorResult, requireParams } from './types.js';
+
+export const Schemas = {
+  search: z.object({
+    query: z.string(),
+    type: z.enum(['neural', 'keyword', 'auto', 'hybrid', 'fast', 'deep']).optional(),
+    numResults: z.number().optional(),
+    category: z.enum(['company', 'research paper', 'news', 'pdf', 'github', 'tweet', 'personal site', 'people', 'financial report']).optional(),
+    includeDomains: z.array(z.string()).optional(),
+    excludeDomains: z.array(z.string()).optional(),
+    startCrawlDate: z.string().optional(),
+    endCrawlDate: z.string().optional(),
+    startPublishedDate: z.string().optional(),
+    endPublishedDate: z.string().optional(),
+    contents: z.object({
+      text: z.boolean().optional(),
+      highlights: z.boolean().optional(),
+      summary: z.boolean().optional(),
+    }).optional(),
+    includeText: z.array(z.string()).optional(),
+    excludeText: z.array(z.string()).optional(),
+    additionalQueries: z.array(z.string()).max(5).optional(),
+    userLocation: z.string().optional(),
+    moderation: z.boolean().optional(),
+    useAutoprompt: z.boolean().optional(),
+  }),
+  findSimilar: z.object({
+    url: z.string().url(),
+    numResults: z.number().optional(),
+    excludeSourceDomain: z.boolean().optional(),
+    includeDomains: z.array(z.string()).optional(),
+    excludeDomains: z.array(z.string()).optional(),
+    startCrawlDate: z.string().optional(),
+    endCrawlDate: z.string().optional(),
+    startPublishedDate: z.string().optional(),
+    endPublishedDate: z.string().optional(),
+    contents: z.object({
+      text: z.boolean().optional(),
+      highlights: z.boolean().optional(),
+      summary: z.boolean().optional(),
+    }).optional(),
+    includeText: z.array(z.string()).optional(),
+    excludeText: z.array(z.string()).optional(),
+    category: z.enum(['company', 'research paper', 'news', 'pdf', 'github', 'tweet', 'personal site', 'people', 'financial report']).optional(),
+    userLocation: z.string().optional(),
+  }),
+  getContents: z.object({
+    urls: z.union([z.string().url(), z.array(z.string().url())]),
+    text: z.boolean().optional(),
+    highlights: z.boolean().optional(),
+    summary: z.boolean().optional(),
+    livecrawl: z.enum(['never', 'fallback', 'always', 'preferred']).optional(),
+    livecrawlTimeout: z.number().optional(),
+    maxAgeHours: z.number().optional(),
+    subpages: z.number().optional(),
+    subpageTarget: z.array(z.string()).optional(),
+    extras: z.record(z.string(), z.unknown()).optional(),
+    context: z.record(z.string(), z.unknown()).optional(),
+  }),
+  answer: z.object({
+    query: z.string(),
+    text: z.boolean().optional(),
+    model: z.string().optional(),
+    systemPrompt: z.string().optional(),
+    outputSchema: z.record(z.string(), z.unknown()).optional(),
+    userLocation: z.string().optional(),
+  }),
+};
+
 
 const SEARCH_HINTS = `Common issues:
 - type must be one of: neural, keyword, auto, hybrid, fast, deep

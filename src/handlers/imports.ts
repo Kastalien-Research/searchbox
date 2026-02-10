@@ -1,6 +1,43 @@
 import type { Exa } from 'exa-js';
+import { z } from 'zod';
 import { OperationHandler, successResult, errorResult, requireParams } from './types.js';
 import { projectImport } from '../lib/projections.js';
+
+export const Schemas = {
+  create: z.object({
+    format: z.string(),
+    entity: z.object({ type: z.string() }),
+    count: z.number(),
+    size: z.number(),
+    title: z.string().optional(),
+    csv: z.string().optional(),
+    metadata: z.record(z.string()).optional(),
+  }),
+  get: z.object({
+    id: z.string(),
+  }),
+  list: z.object({
+    limit: z.number().optional(),
+    cursor: z.string().optional(),
+  }),
+  update: z.object({
+    id: z.string(),
+    metadata: z.record(z.string()).optional(),
+    title: z.string().optional(),
+  }),
+  waitUntilCompleted: z.object({
+    id: z.string(),
+    timeout: z.number().optional(),
+    pollInterval: z.number().optional(),
+  }),
+  getAll: z.object({
+    maxItems: z.number().optional(),
+  }),
+  del: z.object({
+    id: z.string(),
+  }),
+};
+
 
 export const create: OperationHandler = async (args, exa) => {
   const guard = requireParams('imports.create', args, 'format', 'entity', 'count', 'size');

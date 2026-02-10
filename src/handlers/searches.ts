@@ -1,6 +1,29 @@
 import type { Exa } from 'exa-js';
+import { z } from 'zod';
 import { OperationHandler, successResult, errorResult, requireParams } from './types.js';
 import { projectSearch } from '../lib/projections.js';
+
+export const Schemas = {
+  create: z.object({
+    websetId: z.string(),
+    query: z.string(),
+    count: z.number().optional(),
+    entity: z.object({ type: z.string() }).optional(),
+    criteria: z.array(z.object({ description: z.string() })).optional(),
+    behavior: z.enum(['override', 'append']).optional(),
+    recall: z.boolean().optional(),
+    metadata: z.record(z.string()).optional(),
+  }),
+  get: z.object({
+    websetId: z.string(),
+    searchId: z.string(),
+  }),
+  cancel: z.object({
+    websetId: z.string(),
+    searchId: z.string(),
+  }),
+};
+
 
 const SEARCH_HINTS = `Common issues:
 - criteria must be array of objects: [{description: "criterion"}]
