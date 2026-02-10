@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Canary monitor — PostToolUse hook that tracks edit velocity, scope breadth,
-and computes a pressure score. Writes signals to canary_signals.json."""
+and computes a pressure score. Writes signals to canary_signals.json.
+
+Session detection: uses CLAUDE_SESSION_ID env var (set by Claude Code) to detect
+new conversations. When the session ID changes, counters reset. Falls back to a
+2-hour staleness timeout if the env var isn't available."""
 import json, os, pathlib, sys, time
 
 data = json.load(sys.stdin)
@@ -20,14 +24,40 @@ if signals_path.exists():
 else:
     signals = {}
 
-# Initialize on first call
-if "session_start" not in signals:
+# --- Session boundary detection ---
+# Primary: session_id from hook input JSON changes between conversations
+# Fallback: if last_updated is >2 hours stale, treat as new session
+current_session = data.get("session_id", "")
+stored_session = signals.get("session_id", "")
+last_updated = signals.get("last_updated", 0)
+stale = (time.time() - last_updated) > 7200 if last_updated else True
+
+needs_reset = (
+    "session_start" not in signals
+    or (current_session and current_session != stored_session)
+    or stale
+)
+
+if needs_reset:
+    # Preserve previous session as history (one level deep)
+    if signals.get("session_start"):
+        signals["previous_session"] = {
+            "session_id": stored_session,
+            "edit_count": signals.get("edit_count", 0),
+            "file_count": len(signals.get("files_touched", [])),
+            "turn_count": signals.get("turn_count", 0),
+            "final_pressure": signals.get("pressure", 0.0),
+            "started": signals.get("session_start"),
+            "ended": last_updated,
+        }
     signals["session_start"] = time.time()
+    signals["session_id"] = current_session
     signals["edit_count"] = 0
     signals["files_touched"] = []
     signals["turn_count"] = 0
     signals["pressure"] = 0.0
     signals["warnings"] = []
+    signals["components"] = {}
 
 # Track edits
 if tool_name in ("Edit", "Write"):
@@ -50,15 +80,16 @@ edit_count = signals.get("edit_count", 0)
 file_count = len(signals.get("files_touched", []))
 turn_count = signals.get("turn_count", 0)
 
-# Pressure components (each 0.0 - 1.0, averaged)
-# Edit velocity: >30 edits is high pressure
-edit_pressure = min(edit_count / 30.0, 1.0)
-# Scope breadth: >15 files is high pressure
-scope_pressure = min(file_count / 15.0, 1.0)
-# Turn count: >50 turns is high pressure
-turn_pressure = min(turn_count / 50.0, 1.0)
-# Time: >45 minutes is high pressure
-time_pressure = min(elapsed / 2700.0, 1.0) if elapsed > 0 else 0.0
+# Pressure components (each 0.0 - 1.0, weighted average)
+# Thresholds calibrated for real work sessions:
+#   - 100 edits (was 30): a productive session can easily hit 30 edits
+#   - 40 files (was 15): multi-file refactors touch many files
+#   - 200 turns (was 50): 50 is just getting started
+#   - 90 minutes (was 45): complex tasks need more than 45 min
+edit_pressure = min(edit_count / 100.0, 1.0)
+scope_pressure = min(file_count / 40.0, 1.0)
+turn_pressure = min(turn_count / 200.0, 1.0)
+time_pressure = min(elapsed / 5400.0, 1.0) if elapsed > 0 else 0.0
 
 pressure = (edit_pressure * 0.3 + scope_pressure * 0.3 +
             turn_pressure * 0.2 + time_pressure * 0.2)
@@ -72,7 +103,7 @@ signals["components"] = {
     "elapsed_time": round(time_pressure, 3)
 }
 
-# Add warning if pressure threshold crossed
+# Add warning if pressure threshold crossed (deduplicated per level)
 warnings = signals.get("warnings", [])
 if pressure > 0.7 and not any(w.get("level") == "high" for w in warnings):
     warnings.append({
