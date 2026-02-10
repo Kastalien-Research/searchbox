@@ -113,6 +113,39 @@ Long-running background tasks orchestrate multi-step research patterns. Create w
 | `options` | `[{"label": "..."}]` | `["option1"]` |
 | `cron` | `"0 9 * * 1"` (5-field) | `"0 0 9 * * 1"` (6-field) |
 
+### Optional Compatibility Mode (`compat.mode = "safe"`)
+
+Strict validation remains the default. To enable narrow, deterministic input coercions per call:
+
+```json
+{
+  "operation": "searches.create",
+  "args": {
+    "compat": { "mode": "safe" },
+    "websetId": "ws_abc123",
+    "query": "AI startups",
+    "entity": "company",
+    "criteria": ["has funding"],
+    "count": "25"
+  }
+}
+```
+
+Safe mode can coerce:
+- `"company"` -> `{ "type": "company" }` for `entity`
+- `["criterion"]` -> `[{"description":"criterion"}]` for `criteria`/`searchCriteria`
+- `["A","B"]` -> `[{"label":"A"},{"label":"B"}]` for `options`
+- numeric strings on known numeric fields (for example `"25"` -> `25`)
+- `"true"`/`"false"` on known boolean fields
+
+Not coerced (still strict):
+- cron expressions
+- date/time formats
+- enum case normalization
+- complex nested schema objects
+
+When coercions are applied, successful responses include `_coercions` (and optional `_warnings`).
+
 ## Installation
 
 ### Prerequisites

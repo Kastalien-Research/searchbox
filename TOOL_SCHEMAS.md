@@ -20,6 +20,38 @@ This server exposes a **single MCP tool** called `manage_websets`. Every call pa
 | `options` | `[{"label": "..."}]` | `["option1"]` |
 | `cron` | `"0 9 * * 1"` (5 fields) | `"0 0 9 * * 1"` (6 fields) |
 
+### Optional Compatibility Mode (`compat.mode = "safe"`)
+
+By default, validation is strict. You can opt into deterministic coercions per call:
+
+```json
+{
+  "operation": "searches.create",
+  "args": {
+    "compat": { "mode": "safe" },
+    "websetId": "ws_abc123",
+    "query": "AI startups in SF",
+    "entity": "company",
+    "criteria": ["has funding"],
+    "count": "25"
+  }
+}
+```
+
+Safe mode coercions:
+- `entity`: `"company"` -> `{"type":"company"}` (known types only)
+- `criteria` / `searchCriteria`: `["x"]` -> `[{"description":"x"}]`
+- `options`: `["A","B"]` -> `[{"label":"A"},{"label":"B"}]`
+- selected numeric fields: `"25"` -> `25`
+- selected boolean fields: `"true"` / `"false"` -> `true` / `false`
+
+Not coerced:
+- Cron/date formats
+- Enum case normalization
+- Complex nested schemas
+
+If coercions are applied, successful responses include `_coercions` and optional `_warnings`.
+
 ---
 
 ## Core CRUD Operations

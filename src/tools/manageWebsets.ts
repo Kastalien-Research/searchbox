@@ -15,6 +15,7 @@ import * as events from '../handlers/events.js';
 import * as tasks from '../handlers/tasks.js';
 import * as research from '../handlers/research.js';
 import * as exaSearch from '../handlers/exa.js';
+import { applyCompatCoercions, type AppliedCoercion } from './coercion.js';
 
 // Side-effect imports: register workflows in the registry
 import '../workflows/echo.js';
@@ -133,6 +134,59 @@ const OPERATIONS: Record<string, OperationMeta> = {
 
 const OPERATION_NAMES = Object.keys(OPERATIONS) as [string, ...string[]];
 
+function withCoercionMetadata(
+  result: ToolResult,
+  coercions: AppliedCoercion[],
+  warnings: string[],
+): ToolResult {
+  if (coercions.length === 0 && warnings.length === 0) return result;
+
+  if (result.isError) {
+    const lines: string[] = [];
+    if (coercions.length > 0) {
+      lines.push('Coercions applied:');
+      for (const c of coercions) {
+        lines.push(`- ${c.path}: ${c.from} -> ${c.to}`);
+      }
+    }
+    if (warnings.length > 0) {
+      lines.push('Warnings:');
+      for (const w of warnings) {
+        lines.push(`- ${w}`);
+      }
+    }
+
+    return {
+      ...result,
+      content: [{
+        type: 'text',
+        text: `${result.content[0]?.text ?? ''}\n\n${lines.join('\n')}`.trim(),
+      }],
+    };
+  }
+
+  const rawText = result.content[0]?.text;
+  if (!rawText) return result;
+
+  try {
+    const parsed = JSON.parse(rawText) as unknown;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return result;
+    }
+
+    const enriched = parsed as Record<string, unknown>;
+    if (coercions.length > 0) enriched._coercions = coercions;
+    if (warnings.length > 0) enriched._warnings = warnings;
+
+    return {
+      ...result,
+      content: [{ type: 'text', text: JSON.stringify(enriched, null, 2) }],
+    };
+  } catch {
+    return result;
+  }
+}
+
 function buildToolDescription(): string {
   const groups: Record<string, string[]> = {};
   for (const [name, meta] of Object.entries(OPERATIONS)) {
@@ -179,6 +233,7 @@ PARAMETER FORMAT RULES:
 - entity: MUST be {type: "company"} (object, NOT string)
 - options: MUST be [{label: "..."}] (array of objects, NOT strings)
 - cron: MUST be 5-field format "minute hour day month weekday"
+- compat mode (optional): set args.compat = { mode: "safe" } for deterministic input coercions with _coercions metadata in responses
 
 OPERATIONS:
 
@@ -209,15 +264,17 @@ export function registerManageWebsetsTool(server: McpServer, exa: Exa): void {
         };
       }
 
-      const result = await meta.handler(args || {}, exa);
+      const coercion = applyCompatCoercions(operation, (args || {}) as Record<string, unknown>);
+      const result = await meta.handler(coercion.args, exa);
+      const finalResult = withCoercionMetadata(result, coercion.coercions, coercion.warnings);
 
-      if (result.isError) {
-        logger.error(result.content[0]?.text || 'Unknown error');
+      if (finalResult.isError) {
+        logger.error(finalResult.content[0]?.text || 'Unknown error');
       } else {
         logger.complete();
       }
 
-      return result;
+      return finalResult;
     },
   );
 }
