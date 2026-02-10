@@ -15,7 +15,7 @@ import * as events from '../handlers/events.js';
 import * as tasks from '../handlers/tasks.js';
 import * as research from '../handlers/research.js';
 import * as exaSearch from '../handlers/exa.js';
-import { applyCompatCoercions, type AppliedCoercion } from './coercion.js';
+import { applyCompatCoercions, type AppliedCoercion, type CompatMode } from './coercion.js';
 
 // Side-effect imports: register workflows in the registry
 import '../workflows/echo.js';
@@ -134,6 +134,10 @@ const OPERATIONS: Record<string, OperationMeta> = {
 
 const OPERATION_NAMES = Object.keys(OPERATIONS) as [string, ...string[]];
 
+interface ManageWebsetsOptions {
+  defaultCompatMode?: CompatMode;
+}
+
 function withCoercionMetadata(
   result: ToolResult,
   coercions: AppliedCoercion[],
@@ -234,13 +238,20 @@ PARAMETER FORMAT RULES:
 - options: MUST be [{label: "..."}] (array of objects, NOT strings)
 - cron: MUST be 5-field format "minute hour day month weekday"
 - compat mode (optional): set args.compat = { mode: "safe" } for deterministic input coercions with _coercions metadata in responses
+- strict override: set args.compat = { mode: "strict" } to force strict validation on a call
 
 OPERATIONS:
 
 ${sections}`;
 }
 
-export function registerManageWebsetsTool(server: McpServer, exa: Exa): void {
+export function registerManageWebsetsTool(
+  server: McpServer,
+  exa: Exa,
+  options: ManageWebsetsOptions = {},
+): void {
+  const defaultCompatMode = options.defaultCompatMode ?? 'strict';
+
   server.registerTool(
     'manage_websets',
     {
@@ -264,7 +275,11 @@ export function registerManageWebsetsTool(server: McpServer, exa: Exa): void {
         };
       }
 
-      const coercion = applyCompatCoercions(operation, (args || {}) as Record<string, unknown>);
+      const coercion = applyCompatCoercions(
+        operation,
+        (args || {}) as Record<string, unknown>,
+        defaultCompatMode,
+      );
       const result = await meta.handler(coercion.args, exa);
       const finalResult = withCoercionMetadata(result, coercion.coercions, coercion.warnings);
 

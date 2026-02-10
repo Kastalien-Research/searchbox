@@ -4,6 +4,8 @@ export interface AppliedCoercion {
   to: string;
 }
 
+export type CompatMode = 'safe' | 'strict';
+
 export interface CoercionResult {
   args: Record<string, unknown>;
   enabled: boolean;
@@ -46,7 +48,6 @@ const BOOLEAN_FIELDS = new Set([
   'summary',
   'livecrawl',
   'subpages',
-  'events',
 ]);
 
 function stringifyValue(value: unknown): string {
@@ -238,6 +239,7 @@ function coerceArgsForOperation(
 export function applyCompatCoercions(
   operation: string,
   args: Record<string, unknown>,
+  defaultMode: CompatMode = 'strict',
 ): CoercionResult {
   const warnings: string[] = [];
   const coercions: AppliedCoercion[] = [];
@@ -254,15 +256,18 @@ export function applyCompatCoercions(
       : undefined
   );
 
-  if (mode !== undefined && mode !== 'safe') {
+  let effectiveMode: CompatMode = defaultMode;
+  if (mode === 'safe' || mode === 'strict') {
+    effectiveMode = mode;
+  } else if (mode !== undefined) {
     warnings.push(`Unsupported compat mode "${String(mode)}"; ignored.`);
+    effectiveMode = 'strict';
   }
 
-  if (mode !== 'safe') {
+  if (effectiveMode !== 'safe') {
     return { args: working, enabled: false, coercions, warnings };
   }
 
   const normalized = coerceArgsForOperation(operation, working, coercions);
   return { args: normalized, enabled: true, coercions, warnings };
 }
-

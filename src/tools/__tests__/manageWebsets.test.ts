@@ -138,5 +138,60 @@ describe('registerManageWebsetsTool', () => {
     const body = JSON.parse(result.content[0].text);
     expect(body._warnings).toEqual(['Unsupported compat mode "aggressive"; ignored.']);
   });
-});
 
+  it('honors server-level default compat mode and per-call strict override', async () => {
+    let handler: ((input: { operation: string; args?: Record<string, unknown> }) => Promise<any>) | null = null;
+
+    const fakeServer = {
+      registerTool: vi.fn((_name, _config, fn) => {
+        handler = fn;
+      }),
+    };
+
+    const createSpy = vi.fn().mockResolvedValue({
+      id: 'search_1',
+      status: 'completed',
+      query: 'ai startups',
+    });
+
+    const exa = {
+      websets: {
+        searches: {
+          create: createSpy,
+        },
+      },
+    } as any;
+
+    registerManageWebsetsTool(fakeServer as any, exa, { defaultCompatMode: 'safe' });
+    expect(handler).not.toBeNull();
+
+    await handler!({
+      operation: 'searches.create',
+      args: {
+        websetId: 'ws_1',
+        query: 'ai startups',
+        entity: 'company',
+      },
+    });
+
+    expect(createSpy).toHaveBeenNthCalledWith(1, 'ws_1', {
+      query: 'ai startups',
+      entity: { type: 'company' },
+    });
+
+    await handler!({
+      operation: 'searches.create',
+      args: {
+        compat: { mode: 'strict' },
+        websetId: 'ws_1',
+        query: 'ai startups',
+        entity: 'company',
+      },
+    });
+
+    expect(createSpy).toHaveBeenNthCalledWith(2, 'ws_1', {
+      query: 'ai startups',
+      entity: 'company',
+    });
+  });
+});

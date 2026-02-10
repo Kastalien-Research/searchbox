@@ -1,7 +1,22 @@
 #!/usr/bin/env node
 import { createServer } from "./server.js";
 
-const { app } = createServer({ exaApiKey: process.env.EXA_API_KEY || '' });
+const defaultCompatModeRaw = process.env.MANAGE_WEBSETS_DEFAULT_COMPAT_MODE;
+const defaultCompatMode = defaultCompatModeRaw === 'safe' ? 'safe' : 'strict';
+if (
+  defaultCompatModeRaw !== undefined &&
+  defaultCompatModeRaw !== 'safe' &&
+  defaultCompatModeRaw !== 'strict'
+) {
+  console.warn(
+    `Invalid MANAGE_WEBSETS_DEFAULT_COMPAT_MODE="${defaultCompatModeRaw}". Using "strict".`,
+  );
+}
+
+const { app } = createServer({
+  exaApiKey: process.env.EXA_API_KEY || '',
+  defaultCompatMode,
+});
 
 const PORT = process.env.PORT || 7860;
 

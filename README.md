@@ -146,6 +146,22 @@ Not coerced (still strict):
 
 When coercions are applied, successful responses include `_coercions` (and optional `_warnings`).
 
+### Server-Level Default Compat Mode
+
+You can set a server-wide default mode:
+
+```bash
+MANAGE_WEBSETS_DEFAULT_COMPAT_MODE=safe
+```
+
+Allowed values:
+- `strict` (default)
+- `safe`
+
+Precedence:
+- Per-call `args.compat.mode` takes precedence over server default.
+- Use `args.compat.mode = "strict"` to force strict validation on a specific call when server default is `safe`.
+
 ## Installation
 
 ### Prerequisites

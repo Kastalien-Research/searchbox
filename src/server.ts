@@ -10,6 +10,7 @@ export interface ServerConfig {
   exaApiKey: string;
   host?: string;
   sessionTimeoutMs?: number;
+  defaultCompatMode?: 'safe' | 'strict';
 }
 
 export interface ServerInstance {
@@ -121,7 +122,9 @@ export function createServer(config: ServerConfig): ServerInstance {
           enableJsonResponse: true,
         });
 
-        registerManageWebsetsTool(server, exa);
+        registerManageWebsetsTool(server, exa, {
+          defaultCompatMode: config.defaultCompatMode ?? 'strict',
+        });
 
         transport.onclose = () => {
           const entry = sessions.get(transport.sessionId || newSessionId);

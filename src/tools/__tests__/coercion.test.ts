@@ -30,6 +30,36 @@ describe('applyCompatCoercions', () => {
     ]);
   });
 
+  it('uses server default safe mode when compat is absent', () => {
+    const result = applyCompatCoercions(
+      'searches.create',
+      {
+        entity: 'company',
+        criteria: ['has funding'],
+      },
+      'safe',
+    );
+
+    expect(result.enabled).toBe(true);
+    expect(result.args.entity).toEqual({ type: 'company' });
+    expect(result.args.criteria).toEqual([{ description: 'has funding' }]);
+  });
+
+  it('supports per-call strict override when default mode is safe', () => {
+    const result = applyCompatCoercions(
+      'searches.create',
+      {
+        compat: { mode: 'strict' },
+        entity: 'company',
+      },
+      'safe',
+    );
+
+    expect(result.enabled).toBe(false);
+    expect(result.args.entity).toBe('company');
+    expect(result.coercions).toHaveLength(0);
+  });
+
   it('coerces nested tasks.create args safely', () => {
     const result = applyCompatCoercions('tasks.create', {
       compat: { mode: 'safe' },
@@ -85,7 +115,7 @@ describe('applyCompatCoercions', () => {
     const result = applyCompatCoercions('searches.create', {
       compat: { mode: 'aggressive' },
       entity: 'company',
-    });
+    }, 'safe');
 
     expect(result.enabled).toBe(false);
     expect(result.args.entity).toBe('company');
@@ -94,4 +124,3 @@ describe('applyCompatCoercions', () => {
     ]);
   });
 });
-

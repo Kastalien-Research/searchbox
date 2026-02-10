@@ -113,6 +113,7 @@ Tests use **Vitest** with config in `vitest.config.ts` (excludes `dist/` dir). T
 ## Environment
 
 - **Required**: `EXA_API_KEY` environment variable (or passed via config)
+- **Optional**: `MANAGE_WEBSETS_DEFAULT_COMPAT_MODE` (`strict` default, `safe` to enable default coercions)
 - **Node**: >=20.0.0
 - **Module system**: ESM (`"type": "module"` in package.json)
 - TypeScript target: ES2022, module: Node16, strict mode

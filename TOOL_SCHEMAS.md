@@ -52,6 +52,16 @@ Not coerced:
 
 If coercions are applied, successful responses include `_coercions` and optional `_warnings`.
 
+### Server-Level Default Compat Mode
+
+Set `MANAGE_WEBSETS_DEFAULT_COMPAT_MODE` at server startup:
+- `strict` (default)
+- `safe`
+
+Precedence rules:
+- Per-call `args.compat.mode` overrides server default.
+- `args.compat.mode = "strict"` forces strict validation for that call.
+
 ---
 
 ## Core CRUD Operations
